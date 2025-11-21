@@ -45,14 +45,60 @@ const std::vector<std::string> species_names = {"""
     transport_props_list: list[str] = []
     molar_masses_list: list[str] = []
     molecular_structures_list: list[str] = []
-    
+
     def format_double(value):
         """Format a double value, converting NaN to C++ quiet_NaN()"""
         if pd.isna(value) or (isinstance(value, float) and math.isnan(value)):
             return "std::numeric_limits<double>::quiet_NaN()"
         return str(value)
-    
-    for _, row in df.iterrows():
+
+    def get_int_or_zero(val):
+        """Convert a possibly-NaN numeric value to int, defaulting to 0."""
+        if pd.isna(val):
+            return 0
+        return int(val)
+
+    def species_sort_key(row):
+        """Return a tuple used to sort species into human-friendly groups.
+
+        Groups (by primary key):
+        0: air species [N2, O2, AR, CO2, H2O] in that order
+        1: inert species
+        2: hydrocarbons (C>0, H>0, O==0, N==0) ordered by C, then name
+        3: other fuel species (C>0 but not hydrocarbons) alphabetical
+        4: remaining species alphabetical
+        """
+
+        name = str(row["species_name"]).upper()
+
+        air_order = ["N2", "O2", "AR", "CO2", "H2O"]
+        if name in air_order:
+            return (0, air_order.index(name), name)
+
+        C = get_int_or_zero(row.get("C"))
+        H = get_int_or_zero(row.get("H"))
+        O = get_int_or_zero(row.get("O"))
+        N = get_int_or_zero(row.get("N"))
+
+        # Inert species: no C, H, O; allow N or others, but exclude air species
+        if C == 0 and H == 0 and O == 0:
+            return (1, name)
+
+        # Hydrocarbons: C>0, H>0, no O or N
+        if C > 0 and H > 0 and O == 0 and N == 0:
+            return (2, C, name)
+
+        # Other fuels: contain carbon but are not pure hydrocarbons
+        if C > 0:
+            return (3, name)
+
+        # Everything else: group 4, alphabetical
+        return (4, name)
+
+    # Sort rows according to the custom species ordering rules
+    sorted_rows = sorted((row for _, row in df.iterrows()), key=species_sort_key)
+
+    for row in sorted_rows:
         species = str(row['species_name'])
         species_list.append(species)
         
@@ -73,7 +119,7 @@ const std::vector<std::string> species_names = {"""
         molar_masses_list.append(str(row['molar_mass']))
 
         molecular_structures_list.append(
-            f"{{{int(row['C'])}, {int(row['H'])}, {int(row['O'])}, {int(row['N'])}}}"
+            f"{{{get_int_or_zero(row['C'])}, {get_int_or_zero(row['H'])}, {get_int_or_zero(row['O'])}, {get_int_or_zero(row['N'])}}}"
         )
     
     header_content += ", ".join(f'"{s}"' for s in species_list) + "};\n\n"
