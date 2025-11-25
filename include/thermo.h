@@ -24,9 +24,14 @@ int species_index_from_name(const std::string& name);
 double mwmix(const std::vector<double>& X);
 
 // NASA polynomial evaluations
+// cp_R  : dimensionless heat capacity Cp/R
+// h_RT  : dimensionless enthalpy  H/(R*T)
+// s_R   : dimensionless entropy   S/R at reference pressure and pure species
+// g_over_RT : dimensionless Gibbs free energy G/(R*T) = H/(R*T) - S/R
 double cp_R(int species_idx, double T);
 double h_RT(int species_idx, double T);
 double s_R(int species_idx, double T);
+double g_over_RT(int species_idx, double T);
 
 // Thermodynamic properties
 double cp(double T, const std::vector<double>& X);
@@ -44,10 +49,11 @@ double oxygen_required_per_kg_fuel(int fuel_index);
 double oxygen_required_per_mol_mixture(const std::vector<double>& X);
 double oxygen_required_per_kg_mixture(const std::vector<double>& X);
 
-// Derivatives
+// Derivatives of thermodynamic properties with respect to temperature
 double dh_dT(double T, const std::vector<double>& X);
 double ds_dT(double T, const std::vector<double>& X);
 double dcp_dT(double T, const std::vector<double>& X);
+double dg_over_RT_dT(double T, const std::vector<double>& X);
 
 // Collision integral functions
 double linear_interp(double x, const std::vector<double>& x_values, const std::vector<double>& y_values);

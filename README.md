@@ -19,6 +19,8 @@ This library provides tools for calculating thermodynamic properties of gases, w
 - Dry air composition handling (N₂, O₂, Ar, CO₂)
 - Humidity ratio calculations
 - Mole fraction normalization and conversion utilities
+ - Ideal-gas thermodynamic helpers, including Cp, H, S and Gibbs free energy
+   via `g_over_RT` and its temperature derivative `dg_over_RT_dT`
 
 ## Building the Project
 
