@@ -1,26 +1,27 @@
 # Thermo
 
-A C++ library for thermodynamic calculations with a focus on humid air properties.
+A C++ library for thermodynamic and combustion calculations for gas mixtures.
 
 ## Overview
 
-This library provides tools for calculating thermodynamic properties of gases, with a particular focus on humid air calculations using the Hyland-Wexler equations. It includes functionality for:
+This library provides tools for ideal-gas thermodynamic properties, combustion stoichiometry, transport properties, and humid air calculations. It includes functionality for:
 
-- Thermodynamic property calculations
+- Thermodynamic property calculations for multi-species gas mixtures
+- Combustion utilities (stoichiometric O₂ demand, complete combustion products)
 - Saturation vapor pressure calculations for water and ice
 - Humid air composition and property calculations
 - Mole fraction utilities
 
 ## Features
 
-- Accurate saturation vapor pressure calculations using Hyland-Wexler equations
-  - For ice (-80°C to 0°C): Maximum relative error ≤ 0.023%
-  - For water vapor (0°C to 80°C): Maximum relative error ≤ 0.0057%
-- Dry air composition handling (N₂, O₂, Ar, CO₂)
-- Humidity ratio calculations
-- Mole fraction normalization and conversion utilities
- - Ideal-gas thermodynamic helpers, including Cp, H, S and Gibbs free energy
-   via `g_over_RT` and its temperature derivative `dg_over_RT_dT`
+- Ideal-gas mixture properties: Cp, H, S, density, speed of sound
+- Gibbs free energy helpers `g_over_RT` and `dg_over_RT_dT`
+- Combustion tools: O₂ demand per fuel/mixture, complete combustion to CO₂/H₂O
+- Accurate saturation vapor pressure using Hyland-Wexler equations
+  - For ice (-80°C to 0°C): maximum relative error ≤ 0.023%
+  - For water vapor (0°C to 80°C): maximum relative error ≤ 0.0057%
+- Dry air and humid air utilities (humidity ratio, compositions, dew point)
+- Mole fraction normalization and wet/dry conversion utilities
 
 ## Building the Project
 
@@ -57,23 +58,27 @@ The `examples` directory contains sample applications demonstrating the library'
 
 ## Testing
 
-The project includes comprehensive tests to validate the accuracy of calculations:
+The project uses GoogleTest and CTest to validate the accuracy of calculations:
 
-- Core thermodynamic property tests
-- Humid air calculation tests
-- Mole fraction utility tests
+- Core thermodynamic and transport property tests
+- Combustion and mixture-fraction tests
+- Humid air and saturation pressure tests
+- Evaporative cooler model tests
 - Accuracy validation against Hyland-Wexler reference values
 
-Run the tests with:
+From the build directory you can run:
 
 ```bash
-cd build
+# Run all tests via CTest
+ctest --output-on-failure
+
+# Run only the main thermo test suite
+ctest -R thermo_tests --output-on-failure
+
+# Or invoke the test executable directly
 ./tests/thermo_tests
-```
 
-For specific accuracy tests:
-
-```bash
+# Accuracy tests for saturation vapor pressure
 ./tests/test_ice_equation_accuracy
 ./tests/test_water_equation_accuracy
 ```
