@@ -103,6 +103,12 @@ std::vector<double> normalize_fractions(const std::vector<double>& fractions);
 // Returns all zeros with a warning if input contains only water vapor
 std::vector<double> convert_to_dry_fractions(const std::vector<double>& mole_fractions);
 
+// Convert mole fractions X_k to mass fractions Y_k using molar_masses.
+std::vector<double> mole_to_mass(const std::vector<double>& X);
+
+// Convert mass fractions Y_k to mole fractions X_k using molar_masses.
+std::vector<double> mass_to_mole(const std::vector<double>& Y);
+
 // Combustion calculations (duplicate declarations for convenience)
 double oxygen_required_per_mol_fuel(std::size_t fuel_index);
 double oxygen_required_per_kg_fuel(std::size_t fuel_index);
@@ -121,5 +127,23 @@ std::vector<double> complete_combustion_to_CO2_H2O(const std::vector<double>& X)
 // - 0 < f < 1 for O2-limited cases.
 // - f = 0 if no combustion occurs (no fuel or no O2).
 std::vector<double> complete_combustion_to_CO2_H2O(const std::vector<double>& X, double& fuel_burn_fraction);
+
+// Mixture fraction (Bilger) utilities
+// All Y*, mass fractions over the same species set as species_names / molar_masses.
+double bilger_beta(const std::vector<double>& Y);
+double bilger_mixture_fraction(
+    const std::vector<double>& Y,    // local composition
+    const std::vector<double>& Y_F,  // pure fuel-stream composition
+    const std::vector<double>& Y_O   // pure oxidizer-stream composition
+);
+
+// Convenience overload: Bilger mixture fraction from mole fractions X.
+// Internally converts X, X_F, X_O to mass fractions and calls
+// bilger_mixture_fraction(...) above.
+double bilger_mixture_fraction_from_moles(
+    const std::vector<double>& X,
+    const std::vector<double>& X_F,
+    const std::vector<double>& X_O
+);
 
 #endif // THERMO_H

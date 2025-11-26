@@ -626,6 +626,111 @@ double viscosity(double T, double P [[maybe_unused]], const std::vector<double>&
     return mix_visc;
 }
 
+
+// ============================
+// Bilger mixture fraction
+// ============================
+
+// Bilger scalar beta(Y) based on element mass fractions of C, H, O.
+// Uses:
+//   molecular_structures[k].C/H/O  (atom counts per species)
+//   molar_masses[k]                (species molar masses, g/mol)
+//
+// For each element e:
+//   Z_e / W_e = sum_k Y_k * n_e,k / W_k
+// so Bilger's beta can be written without explicit atomic weights:
+//   beta = 2 * sum_k Y_k C_k / W_k
+//        + 0.5 * sum_k Y_k H_k / W_k
+//        -       sum_k Y_k O_k / W_k
+double bilger_beta(const std::vector<double>& Y)
+{
+    if (Y.size() != molar_masses.size() ||
+        Y.size() != molecular_structures.size()) {
+        throw std::invalid_argument(
+            "bilger_beta: mass-fraction vector size "
+            "does not match species data");
+    }
+
+    double sum_C = 0.0;
+    double sum_H = 0.0;
+    double sum_O = 0.0;
+
+    for (std::size_t k = 0; k < Y.size(); ++k) {
+        double Yk = Y[k];
+        if (Yk == 0.0) continue;
+
+        const auto& ms = molecular_structures[k];
+        double Wk = molar_masses[k]; // g/mol
+
+        if (Wk <= 0.0) {
+            throw std::runtime_error("bilger_beta: non-positive molar mass");
+        }
+
+        // Contributions to Z_e / W_e, see comment above
+        sum_C += Yk * static_cast<double>(ms.C) / Wk;
+        sum_H += Yk * static_cast<double>(ms.H) / Wk;
+        sum_O += Yk * static_cast<double>(ms.O) / Wk;
+    }
+
+    // Bilger's scalar (proportional to 2 Z_C/W_C + 0.5 Z_H/W_H - Z_O/W_O)
+    return 2.0 * sum_C + 0.5 * sum_H - sum_O;
+}
+
+// Bilger mixture fraction Z in [0,1] between two streams F and O,
+// defined as a normalized Bilger scalar:
+//   Z = (beta - beta_O) / (beta_F - beta_O)
+double bilger_mixture_fraction(
+    const std::vector<double>& Y,
+    const std::vector<double>& Y_F,
+    const std::vector<double>& Y_O)
+{
+    if (Y.size() != Y_F.size() || Y.size() != Y_O.size()) {
+        throw std::invalid_argument(
+            "bilger_mixture_fraction: all mass-fraction vectors "
+            "must have the same size");
+    }
+
+    const double beta   = bilger_beta(Y);
+    const double beta_F = bilger_beta(Y_F);
+    const double beta_O = bilger_beta(Y_O);
+
+    const double denom = beta_F - beta_O;
+    if (std::abs(denom) < 1e-16) {
+        throw std::runtime_error(
+            "bilger_mixture_fraction: fuel and oxidizer have "
+            "identical Bilger scalar (denominator ~ 0)");
+    }
+
+    double Z = (beta - beta_O) / denom;
+
+    // Clamp to [0,1] to handle small numerical overshoots
+    if (Z < 0.0)      Z = 0.0;
+    else if (Z > 1.0) Z = 1.0;
+
+    return Z;
+}
+
+// Convenience wrapper: inputs are mole fractions X, X_F, X_O.
+// These are converted to mass fractions first and then passed to
+// the mass-fraction-based Bilger implementation above.
+double bilger_mixture_fraction_from_moles(
+    const std::vector<double>& X,
+    const std::vector<double>& X_F,
+    const std::vector<double>& X_O)
+{
+    if (X.size() != X_F.size() || X.size() != X_O.size()) {
+        throw std::invalid_argument(
+            "bilger_mixture_fraction_from_moles: all mole-fraction "
+            "vectors must have the same size");
+    }
+
+    const auto Y   = mole_to_mass(X);
+    const auto Y_F = mole_to_mass(X_F);
+    const auto Y_O = mole_to_mass(X_O);
+
+    return bilger_mixture_fraction(Y, Y_F, Y_O);
+}
+
 // Calculate thermal conductivity [W/(m·K)] using Cantera approach
 // P is not used but kept for API consistency
 double thermal_conductivity(double T, double P [[maybe_unused]], const std::vector<double>& X) {
@@ -973,6 +1078,54 @@ std::vector<double> convert_to_dry_fractions(const std::vector<double>& mole_fra
     }
     
     return dry_fractions;
+}
+
+// Convert mole fractions X_k to mass fractions Y_k using molar_masses.
+std::vector<double> mole_to_mass(const std::vector<double>& X)
+{
+    if (X.size() != molar_masses.size()) {
+        throw std::invalid_argument("mole_to_mass: size mismatch");
+    }
+
+    double denom = 0.0;
+    for (std::size_t k = 0; k < X.size(); ++k) {
+        denom += X[k] * molar_masses[k];
+    }
+    if (denom <= 0.0) {
+        throw std::runtime_error("mole_to_mass: non-positive denominator");
+    }
+
+    std::vector<double> Y(X.size());
+    for (std::size_t k = 0; k < X.size(); ++k) {
+        Y[k] = X[k] * molar_masses[k] / denom;
+    }
+    return Y;
+}
+
+// Convert mass fractions Y_k to mole fractions X_k using molar_masses.
+std::vector<double> mass_to_mole(const std::vector<double>& Y)
+{
+    if (Y.size() != molar_masses.size()) {
+        throw std::invalid_argument("mass_to_mole: size mismatch");
+    }
+
+    double denom = 0.0;
+    for (std::size_t k = 0; k < Y.size(); ++k) {
+        double Wk = molar_masses[k];
+        if (Wk <= 0.0) {
+            throw std::runtime_error("mass_to_mole: non-positive molar mass");
+        }
+        denom += Y[k] / Wk;
+    }
+    if (denom <= 0.0) {
+        throw std::runtime_error("mass_to_mole: non-positive denominator");
+    }
+
+    std::vector<double> X(Y.size());
+    for (std::size_t k = 0; k < Y.size(); ++k) {
+        X[k] = (Y[k] / molar_masses[k]) / denom;
+    }
+    return X;
 }
 
 // Print all properties of a mixture at given temperature and pressure
