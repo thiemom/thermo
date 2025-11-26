@@ -49,6 +49,12 @@ try:
         specific_gas_constant,
         isentropic_expansion_coefficient,
         speed_of_sound,
+        mole_to_mass,
+        mass_to_mole,
+        equivalence_ratio_mole,
+        set_equivalence_ratio_mole,
+        equivalence_ratio_mass,
+        set_equivalence_ratio_mass,
     )
 except ModuleNotFoundError:
     # Fallback: attempt to import from an installed combaero package that
@@ -64,6 +70,12 @@ except ModuleNotFoundError:
     specific_gas_constant = _core.specific_gas_constant
     isentropic_expansion_coefficient = _core.isentropic_expansion_coefficient
     speed_of_sound = _core.speed_of_sound
+    mole_to_mass = _core.mole_to_mass
+    mass_to_mole = _core.mass_to_mole
+    equivalence_ratio_mole = _core.equivalence_ratio_mole
+    set_equivalence_ratio_mole = _core.set_equivalence_ratio_mole
+    equivalence_ratio_mass = _core.equivalence_ratio_mass
+    set_equivalence_ratio_mass = _core.set_equivalence_ratio_mass
 
 
 __all__ = [
@@ -77,5 +89,11 @@ __all__ = [
     "specific_gas_constant",
     "isentropic_expansion_coefficient",
     "speed_of_sound",
+    "mole_to_mass",
+    "mass_to_mole",
+    "equivalence_ratio_mole",
+    "set_equivalence_ratio_mole",
+    "equivalence_ratio_mass",
+    "set_equivalence_ratio_mass",
     "__version__",
 ]

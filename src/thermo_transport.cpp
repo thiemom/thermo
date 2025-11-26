@@ -691,6 +691,215 @@ std::vector<double> set_equivalence_ratio_mole(
     return X_mix;
 }
 
+// -------------------------------------------------------------
+// Helpers: mass <-> mole conversion
+// -------------------------------------------------------------
+
+static void mass_to_mole(
+    const std::vector<double>& Y,
+    std::vector<double>& X)
+{
+    if (Y.size() != molar_masses.size()) {
+        throw std::invalid_argument("mass_to_mole: size mismatch");
+    }
+
+    const std::size_t n = Y.size();
+    double denom = 0.0;
+
+    for (std::size_t k = 0; k < n; ++k) {
+        double Wk = molar_masses[k]; // g/mol (any consistent unit)
+        if (Wk <= 0.0) {
+            throw std::runtime_error("mass_to_mole: non-positive molar mass");
+        }
+        denom += Y[k] / Wk;
+    }
+
+    if (denom <= 0.0) {
+        throw std::runtime_error("mass_to_mole: non-positive denominator");
+    }
+
+    X.resize(n);
+    for (std::size_t k = 0; k < n; ++k) {
+        double Wk = molar_masses[k];
+        X[k] = (Y[k] / Wk) / denom;
+    }
+}
+
+// -------------------------------------------------------------
+// Stoichiometric F/O (mass basis)
+// -------------------------------------------------------------
+
+// Stoichiometric fuel-to-oxidizer mass ratio (F/O)_st for a fuel mixture
+// (mass fractions Y_fuel) and an oxidizer mixture Y_ox (mass fractions).
+//
+// Uses:
+//   - oxygen_required_per_kg_mixture(X_fuel): kg O2 per kg fuel mixture
+//   - O2 mass fraction in oxidizer stream Y_ox[O2_index]
+static double stoich_f_over_o_mass(
+    const std::vector<double>& Y_fuel,
+    const std::vector<double>& Y_ox)
+{
+    if (Y_fuel.size() != species_names.size() ||
+        Y_ox.size()   != species_names.size()) {
+        throw std::invalid_argument("stoich_f_over_o_mass: size mismatch");
+    }
+
+    static const int O2_index = find_species_index("O2");
+
+    const double Y_O2_ox = Y_ox[static_cast<std::size_t>(O2_index)];
+    if (Y_O2_ox <= 0.0) {
+        throw std::runtime_error(
+            "stoich_f_over_o_mass: oxidizer has zero O2 mass fraction");
+    }
+
+    // Convert fuel stream from mass fractions to mole fractions for use in
+    // oxygen_required_per_kg_mixture(X_fuel).
+    std::vector<double> X_fuel;
+    mass_to_mole(Y_fuel, X_fuel);
+
+    // kg O2 per kg fuel mixture
+    const double m_O2_req = oxygen_required_per_kg_mixture(X_fuel);
+    if (m_O2_req <= 0.0) {
+        throw std::runtime_error(
+            "stoich_f_over_o_mass: oxygen_required_per_kg_mixture returned non-positive");
+    }
+
+    // Stoichiometric oxidizer mass (kg) per 1 kg fuel:
+    //   m_O2_req = Y_O2_ox * m_ox_st  ->  m_ox_st = m_O2_req / Y_O2_ox
+    // hence (F/O)_st (mass) = m_fuel / m_ox_st = 1 / (m_O2_req / Y_O2_ox)
+    //                        = Y_O2_ox / m_O2_req
+    const double r_st = Y_O2_ox / m_O2_req;
+    return r_st;
+}
+
+// -------------------------------------------------------------
+// Actual F/O (mass basis) from a given mixture Y_mix
+// -------------------------------------------------------------
+
+// For mass mixing of fuel and oxidizer:
+//   Y_mix = (m_F Y_fuel + m_Ox Y_ox) / (m_F + m_Ox),
+// let r = m_F / m_Ox. For any species j with Y_fuel[j] != Y_ox[j]:
+//
+//   Y_mix[j] (r + 1) = r Y_fuel[j] + Y_ox[j]
+//   r (Y_mix[j] - Y_fuel[j]) = Y_ox[j] - Y_mix[j]
+//   r = (Y_ox[j] - Y_mix[j]) / (Y_mix[j] - Y_fuel[j])
+//
+// We pick the first j that gives a numerically stable r.
+static double actual_f_over_o_mass(
+    const std::vector<double>& Y_mix,
+    const std::vector<double>& Y_fuel,
+    const std::vector<double>& Y_ox)
+{
+    const std::size_t n = species_names.size();
+    if (Y_mix.size()  != n ||
+        Y_fuel.size() != n ||
+        Y_ox.size()   != n) {
+        throw std::invalid_argument("actual_f_over_o_mass: size mismatch");
+    }
+
+    const double eps = 1e-12;
+    bool found = false;
+    double r = 0.0;
+
+    for (std::size_t j = 0; j < n; ++j) {
+        const double yf = Y_fuel[j];
+        const double yo = Y_ox[j];
+        const double ym = Y_mix[j];
+
+        if (std::abs(yf - yo) < eps) {
+            continue; // no contrast between fuel and oxidizer for this species
+        }
+
+        const double denom = ym - yf;
+        if (std::abs(denom) < eps) {
+            continue; // numerically unstable
+        }
+
+        const double r_j = (yo - ym) / denom;
+
+        // Require physically reasonable (non-negative) r_j
+        if (r_j < -1e-8) {
+            continue;
+        }
+
+        r = r_j;
+        found = true;
+        break;
+    }
+
+    if (!found) {
+        throw std::runtime_error(
+            "actual_f_over_o_mass: could not determine mixing ratio "
+            "from Y_mix, Y_fuel, Y_ox (mixture not on mixing line?)");
+    }
+
+    return r;
+}
+
+// -------------------------------------------------------------
+// Public mass-basis φ functions
+// -------------------------------------------------------------
+
+double equivalence_ratio_mass(
+    const std::vector<double>& Y_mix,
+    const std::vector<double>& Y_fuel,
+    const std::vector<double>& Y_ox)
+{
+    const double r_act = actual_f_over_o_mass(Y_mix, Y_fuel, Y_ox);
+    const double r_st  = stoich_f_over_o_mass(Y_fuel, Y_ox);
+
+    return r_act / r_st; // φ = (F/O)_act / (F/O)_st (mass basis)
+}
+
+std::vector<double> set_equivalence_ratio_mass(
+    double phi,
+    const std::vector<double>& Y_fuel,
+    const std::vector<double>& Y_ox)
+{
+    const std::size_t n = species_names.size();
+    if (Y_fuel.size() != n || Y_ox.size() != n) {
+        throw std::invalid_argument("set_equivalence_ratio_mass: size mismatch");
+    }
+    if (phi <= 0.0) {
+        throw std::invalid_argument("set_equivalence_ratio_mass: phi must be > 0");
+    }
+
+    const double r_st = stoich_f_over_o_mass(Y_fuel, Y_ox);
+    const double r    = phi * r_st; // (F/O)_act = φ * (F/O)_st
+
+    const double m_F  = r;
+    const double m_Ox = 1.0;
+    const double m_tot = m_F + m_Ox;
+
+    std::vector<double> Y_mix(n, 0.0);
+
+    // Fuel-stream contribution
+    for (std::size_t k = 0; k < n; ++k) {
+        if (Y_fuel[k] != 0.0) {
+            Y_mix[k] += (m_F * Y_fuel[k]) / m_tot;
+        }
+    }
+
+    // Oxidizer-stream contribution
+    for (std::size_t k = 0; k < n; ++k) {
+        if (Y_ox[k] != 0.0) {
+            Y_mix[k] += (m_Ox * Y_ox[k]) / m_tot;
+        }
+    }
+
+    // Renormalize to guard against any small numerical drift
+    double sum = std::accumulate(Y_mix.begin(), Y_mix.end(), 0.0);
+    if (sum <= 0.0) {
+        throw std::runtime_error(
+            "set_equivalence_ratio_mass: resulting mixture has non-positive sum");
+    }
+    for (double& y : Y_mix) {
+        y /= sum;
+    }
+
+    return Y_mix;
+}
+
 // Implementation of collision integral tables
 
 // Collision integral lookup tables based on Cantera's MMCollisionInt

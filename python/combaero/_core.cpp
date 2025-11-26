@@ -185,6 +185,97 @@ PYBIND11_MODULE(_core, m)
         "Speed of sound c(T, X) [m/s]."
     );
 
+    // Composition conversion helpers
+    m.def(
+        "mole_to_mass",
+        [](py::array_t<double, py::array::c_style | py::array::forcecast> X_arr)
+        {
+            auto X = to_vec(X_arr);
+            return mole_to_mass(X);
+        },
+        py::arg("X"),
+        "Convert mole fractions X to mass fractions Y.")
+    ;
+
+    m.def(
+        "mass_to_mole",
+        [](py::array_t<double, py::array::c_style | py::array::forcecast> Y_arr)
+        {
+            auto Y = to_vec(Y_arr);
+            return mass_to_mole(Y);
+        },
+        py::arg("Y"),
+        "Convert mass fractions Y to mole fractions X.")
+    ;
+
+    // Equivalence ratio (mole basis)
+    m.def(
+        "equivalence_ratio_mole",
+        [](py::array_t<double, py::array::c_style | py::array::forcecast> X_mix_arr,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_fuel_arr,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_ox_arr)
+        {
+            auto X_mix  = to_vec(X_mix_arr);
+            auto X_fuel = to_vec(X_fuel_arr);
+            auto X_ox   = to_vec(X_ox_arr);
+            return equivalence_ratio_mole(X_mix, X_fuel, X_ox);
+        },
+        py::arg("X_mix"),
+        py::arg("X_fuel"),
+        py::arg("X_ox"),
+        "Equivalence ratio phi (mole basis) for mixture X_mix formed from fuel X_fuel and oxidizer X_ox.")
+    ;
+
+    m.def(
+        "set_equivalence_ratio_mole",
+        [](double phi,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_fuel_arr,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_ox_arr)
+        {
+            auto X_fuel = to_vec(X_fuel_arr);
+            auto X_ox   = to_vec(X_ox_arr);
+            return set_equivalence_ratio_mole(phi, X_fuel, X_ox);
+        },
+        py::arg("phi"),
+        py::arg("X_fuel"),
+        py::arg("X_ox"),
+        "Construct mole-fraction mixture X_mix with target phi from fuel X_fuel and oxidizer X_ox.")
+    ;
+
+    // Equivalence ratio (mass basis)
+    m.def(
+        "equivalence_ratio_mass",
+        [](py::array_t<double, py::array::c_style | py::array::forcecast> Y_mix_arr,
+           py::array_t<double, py::array::c_style | py::array::forcecast> Y_fuel_arr,
+           py::array_t<double, py::array::c_style | py::array::forcecast> Y_ox_arr)
+        {
+            auto Y_mix  = to_vec(Y_mix_arr);
+            auto Y_fuel = to_vec(Y_fuel_arr);
+            auto Y_ox   = to_vec(Y_ox_arr);
+            return equivalence_ratio_mass(Y_mix, Y_fuel, Y_ox);
+        },
+        py::arg("Y_mix"),
+        py::arg("Y_fuel"),
+        py::arg("Y_ox"),
+        "Equivalence ratio phi (mass basis) for mixture Y_mix formed from fuel Y_fuel and oxidizer Y_ox.")
+    ;
+
+    m.def(
+        "set_equivalence_ratio_mass",
+        [](double phi,
+           py::array_t<double, py::array::c_style | py::array::forcecast> Y_fuel_arr,
+           py::array_t<double, py::array::c_style | py::array::forcecast> Y_ox_arr)
+        {
+            auto Y_fuel = to_vec(Y_fuel_arr);
+            auto Y_ox   = to_vec(Y_ox_arr);
+            return set_equivalence_ratio_mass(phi, Y_fuel, Y_ox);
+        },
+        py::arg("phi"),
+        py::arg("Y_fuel"),
+        py::arg("Y_ox"),
+        "Construct mass-fraction mixture Y_mix with target phi from fuel Y_fuel and oxidizer Y_ox.")
+    ;
+
     m.def(
         "adiabatic_T_wgs",
         [](double T_in,

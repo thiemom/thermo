@@ -75,6 +75,50 @@ std::vector<double> set_equivalence_ratio_mole(
     const std::vector<double>& X_fuel,
     const std::vector<double>& X_ox);
 
+// Equivalence ratio (mass basis) for multi-species fuel + oxidizer.
+// Y_* are mass fractions over the same species set as species_names.
+
+// Compute φ for a given unreacted mixture Y_mix that is formed only by
+// mixing a fuel stream (Y_fuel) and an oxidizer stream (Y_ox).
+double equivalence_ratio_mass(
+    const std::vector<double>& Y_mix,
+    const std::vector<double>& Y_fuel,
+    const std::vector<double>& Y_ox);
+
+// Given target φ, and definitions of the fuel and oxidizer streams,
+// construct the unreacted mixture mass fractions Y_mix.
+std::vector<double> set_equivalence_ratio_mass(
+    double phi,
+    const std::vector<double>& Y_fuel,
+    const std::vector<double>& Y_ox);
+
+    // Bilger mixture fraction (mass basis) already declared:
+// double bilger_beta(const std::vector<double>& Y);
+// double bilger_mixture_fraction(
+//     const std::vector<double>& Y,
+//     const std::vector<double>& Y_F,
+//     const std::vector<double>& Y_O);
+
+// Stoichiometric Bilger mixture fraction Z_st for given fuel & oxidizer streams
+// (mass fractions Y_F, Y_O).
+double bilger_stoich_mixture_fraction_mass(
+    const std::vector<double>& Y_F,
+    const std::vector<double>& Y_O);
+
+// Convert Bilger mixture fraction Z -> equivalence ratio φ (mass basis)
+// for given fuel & oxidizer streams.
+double equivalence_ratio_from_bilger_Z_mass(
+    double Z,
+    const std::vector<double>& Y_F,
+    const std::vector<double>& Y_O);
+
+// Convert equivalence ratio φ (mass basis) -> Bilger mixture fraction Z
+// for given fuel & oxidizer streams.
+double bilger_Z_from_equivalence_ratio_mass(
+    double phi,
+    const std::vector<double>& Y_F,
+    const std::vector<double>& Y_O);
+    
 // Derivatives of thermodynamic properties with respect to temperature
 // dh_dT        : dH/dT at constant composition [J/(mol·K)]
 // ds_dT        : dS/dT of mixture standard-state entropy [J/(mol·K²)]
