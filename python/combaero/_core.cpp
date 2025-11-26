@@ -3,7 +3,6 @@
 #include <pybind11/stl.h>
 #include <vector>
 
-#include "thermo_transport.h"
 #include "equilibrium.h"
 #include "humidair.h"
 #include "species_common_names.h"
@@ -457,7 +456,7 @@ PYBIND11_MODULE(_core, m)
            py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
            double T_guess,
            double tol,
-           int max_iter)
+           std::size_t max_iter)
         {
             auto X = to_vec(X_arr);
             return calc_T_from_h(h_target, X, T_guess, tol, max_iter);
@@ -477,7 +476,7 @@ PYBIND11_MODULE(_core, m)
            py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
            double T_guess,
            double tol,
-           int max_iter)
+           std::size_t max_iter)
         {
             auto X = to_vec(X_arr);
             return calc_T_from_s(s_target, P, X, T_guess, tol, max_iter);
@@ -497,7 +496,7 @@ PYBIND11_MODULE(_core, m)
            py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
            double T_guess,
            double tol,
-           int max_iter)
+           std::size_t max_iter)
         {
             auto X = to_vec(X_arr);
             return calc_T_from_cp(cp_target, X, T_guess, tol, max_iter);

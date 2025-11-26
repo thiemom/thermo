@@ -11,6 +11,7 @@ This library provides tools for ideal-gas thermodynamic properties, combustion s
 - Saturation vapor pressure calculations for water and ice
 - Humid air composition and property calculations
 - Mole fraction utilities
+- Python bindings for these utilities via the `combaero` package
 
 ## Features
 
@@ -113,19 +114,19 @@ python -m build --wheel
 # Install (or reinstall) the wheel into the root .venv
 python -m pip install --force-reinstall dist/combaero-0.0.1-*.whl
 
-# Run Python smoke tests
-python -m pytest python/tests/test_import.py
+# Run Python tests
+python -m pytest python/tests
 ```
 
 ## Testing
 
-The project uses GoogleTest and CTest for C++ tests, and pytest for Python smoke tests:
+The project uses GoogleTest and CTest for C++ tests, and pytest for Python tests:
 
 - Core thermodynamic and transport property tests
-- Combustion and mixture-fraction tests
+- Combustion, equivalence-ratio, and Bilger mixture-fraction tests
 - Humid air and saturation pressure tests
 - Accuracy validation against Hyland-Wexler reference values
-- Python import tests for the `combaero` wheel
+- Python tests for the `combaero` API (thermo/transport, humid air, combustion helpers, species common names)
 
 See the *Development workflow* section above for concrete commands.
 
