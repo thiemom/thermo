@@ -227,6 +227,38 @@ static std::vector<double> make_CH4_O2_mixture(double n_CH4, double n_O2) {
     return X;
 }
 
+// Equivalence-ratio consistency test: multi-species fuel + oxidizer streams
+TEST_F(ThermoTransportTest, EquivalenceRatioConsistency) {
+    const std::size_t n = species_names.size();
+
+    // Fuel stream: pure CH4
+    std::vector<double> X_fuel(n, 0.0);
+    const std::size_t idx_CH4 = species_index_from_name("CH4");
+    X_fuel[idx_CH4] = 1.0;
+
+    // Oxidizer stream: simple N2/O2 "air" (79% N2, 21% O2)
+    std::vector<double> X_ox(n, 0.0);
+    const std::size_t idx_O2 = species_index_from_name("O2");
+    const std::size_t idx_N2 = species_index_from_name("N2");
+    X_ox[idx_N2] = 0.79;
+    X_ox[idx_O2] = 0.21;
+
+    // A few representative equivalence ratios
+    const double phis[] = {0.5, 1.0, 2.0};
+
+    for (double phi_target : phis) {
+        auto X_mix = set_equivalence_ratio_mole(phi_target, X_fuel, X_ox);
+
+        // Mixture should be normalized
+        double sum = 0.0;
+        for (double x : X_mix) sum += x;
+        EXPECT_NEAR(sum, 1.0, 1e-12);
+
+        double phi_back = equivalence_ratio_mole(X_mix, X_fuel, X_ox);
+        EXPECT_NEAR(phi_back, phi_target, 1e-10);
+    }
+}
+
 // No O2: mixture should be unchanged, f = 0
 TEST_F(ThermoTransportTest, Combustion_NoOxygen) {
     auto X_in = make_CH4_O2_mixture(1.0, 0.0);

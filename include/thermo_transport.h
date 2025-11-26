@@ -58,6 +58,23 @@ double oxygen_required_per_kg_fuel(std::size_t fuel_index);
 double oxygen_required_per_mol_mixture(const std::vector<double>& X);
 double oxygen_required_per_kg_mixture(const std::vector<double>& X);
 
+// Equivalence ratio (mole basis) for multi-species fuel + oxidizer.
+// X_* are mole fractions over the same species set as species_names.
+
+// Compute φ for a given unreacted mixture X_mix that is formed only by
+// mixing a fuel stream (X_fuel) and an oxidizer stream (X_ox).
+double equivalence_ratio_mole(
+    const std::vector<double>& X_mix,
+    const std::vector<double>& X_fuel,
+    const std::vector<double>& X_ox);
+
+// Given target φ, and definitions of the fuel and oxidizer streams,
+// construct the unreacted mixture mole fractions X_mix.
+std::vector<double> set_equivalence_ratio_mole(
+    double phi,
+    const std::vector<double>& X_fuel,
+    const std::vector<double>& X_ox);
+
 // Derivatives of thermodynamic properties with respect to temperature
 // dh_dT        : dH/dT at constant composition [J/(mol·K)]
 // ds_dT        : dS/dT of mixture standard-state entropy [J/(mol·K²)]
