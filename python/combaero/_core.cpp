@@ -1,9 +1,11 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/stl.h>
 #include <vector>
 
 #include "thermo_transport.h"
 #include "equilibrium.h"
+#include "humidair.h"
 
 namespace py = pybind11;
 
@@ -185,6 +187,101 @@ PYBIND11_MODULE(_core, m)
         "Speed of sound c(T, X) [m/s]."
     );
 
+    // Transport properties
+    m.def(
+        "viscosity",
+        [](double T,
+           double P,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr)
+        {
+            auto X = to_vec(X_arr);
+            return viscosity(T, P, X);
+        },
+        py::arg("T"),
+        py::arg("P"),
+        py::arg("X"),
+        "Dynamic viscosity mu(T, P, X) [Pa·s]."
+    );
+
+    m.def(
+        "thermal_conductivity",
+        [](double T,
+           double P,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr)
+        {
+            auto X = to_vec(X_arr);
+            return thermal_conductivity(T, P, X);
+        },
+        py::arg("T"),
+        py::arg("P"),
+        py::arg("X"),
+        "Thermal conductivity lambda(T, P, X) [W/(m·K)]."
+    );
+
+    m.def(
+        "kinematic_viscosity",
+        [](double T,
+           double P,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr)
+        {
+            auto X = to_vec(X_arr);
+            return kinematic_viscosity(T, P, X);
+        },
+        py::arg("T"),
+        py::arg("P"),
+        py::arg("X"),
+        "Kinematic viscosity nu(T, P, X) [m^2/s]."
+    );
+
+    m.def(
+        "prandtl",
+        [](double T,
+           double P,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr)
+        {
+            auto X = to_vec(X_arr);
+            return prandtl(T, P, X);
+        },
+        py::arg("T"),
+        py::arg("P"),
+        py::arg("X"),
+        "Prandtl number Pr(T, P, X) [-]."
+    );
+
+    // Humid air utilities
+    m.def(
+        "standard_dry_air_composition",
+        &standard_dry_air_composition,
+        "Standard dry air mole-fraction composition over the thermo species set."
+    );
+
+    m.def(
+        "humid_air_composition",
+        &humid_air_composition,
+        py::arg("T"),
+        py::arg("P"),
+        py::arg("RH"),
+        "Humid air mole-fraction composition for temperature T [K], pressure P [Pa], and relative humidity RH (0-1)."
+    );
+
+    m.def(
+        "dewpoint",
+        &dewpoint,
+        py::arg("T"),
+        py::arg("P"),
+        py::arg("RH"),
+        "Dewpoint temperature [K] for ambient T [K], pressure P [Pa], and RH (0-1)."
+    );
+
+    m.def(
+        "relative_humidity_from_dewpoint",
+        &relative_humidity_from_dewpoint,
+        py::arg("T"),
+        py::arg("Tdp"),
+        py::arg("P"),
+        "Relative humidity (0-1) from dry-bulb T [K], dewpoint Tdp [K], and pressure P [Pa]."
+    );
+
     // Composition conversion helpers
     m.def(
         "mole_to_mass",
@@ -207,6 +304,29 @@ PYBIND11_MODULE(_core, m)
         py::arg("Y"),
         "Convert mass fractions Y to mole fractions X.")
     ;
+
+    // Fraction utilities
+    m.def(
+        "normalize_fractions",
+        [](py::array_t<double, py::array::c_style | py::array::forcecast> arr)
+        {
+            auto v = to_vec(arr);
+            return normalize_fractions(v);
+        },
+        py::arg("fractions"),
+        "Normalize a vector of fractions so it sums to 1.0 (or return all zeros if input is all zeros)."
+    );
+
+    m.def(
+        "convert_to_dry_fractions",
+        [](py::array_t<double, py::array::c_style | py::array::forcecast> arr)
+        {
+            auto v = to_vec(arr);
+            return convert_to_dry_fractions(v);
+        },
+        py::arg("mole_fractions"),
+        "Convert mole fractions to dry fractions by removing water vapor and renormalizing."
+    );
 
     // Equivalence ratio (mole basis)
     m.def(
@@ -275,6 +395,172 @@ PYBIND11_MODULE(_core, m)
         py::arg("Y_ox"),
         "Construct mass-fraction mixture Y_mix with target phi from fuel Y_fuel and oxidizer Y_ox.")
     ;
+
+    // Bilger-based helpers (mass basis)
+    m.def(
+        "bilger_stoich_mixture_fraction_mass",
+        [](py::array_t<double, py::array::c_style | py::array::forcecast> Y_fuel_arr,
+           py::array_t<double, py::array::c_style | py::array::forcecast> Y_ox_arr)
+        {
+            auto Y_fuel = to_vec(Y_fuel_arr);
+            auto Y_ox   = to_vec(Y_ox_arr);
+            return bilger_stoich_mixture_fraction_mass(Y_fuel, Y_ox);
+        },
+        py::arg("Y_fuel"),
+        py::arg("Y_ox"),
+        "Stoichiometric Bilger mixture fraction Z_st (mass basis) for fuel Y_fuel and oxidizer Y_ox.");
+
+    m.def(
+        "bilger_Z_from_equivalence_ratio_mass",
+        [](double phi,
+           py::array_t<double, py::array::c_style | py::array::forcecast> Y_fuel_arr,
+           py::array_t<double, py::array::c_style | py::array::forcecast> Y_ox_arr)
+        {
+            auto Y_fuel = to_vec(Y_fuel_arr);
+            auto Y_ox   = to_vec(Y_ox_arr);
+            return bilger_Z_from_equivalence_ratio_mass(phi, Y_fuel, Y_ox);
+        },
+        py::arg("phi"),
+        py::arg("Y_fuel"),
+        py::arg("Y_ox"),
+        "Convert mass-basis equivalence ratio phi to Bilger mixture fraction Z for fuel/oxidizer streams.");
+
+    m.def(
+        "equivalence_ratio_from_bilger_Z_mass",
+        [](double Z,
+           py::array_t<double, py::array::c_style | py::array::forcecast> Y_fuel_arr,
+           py::array_t<double, py::array::c_style | py::array::forcecast> Y_ox_arr)
+        {
+            auto Y_fuel = to_vec(Y_fuel_arr);
+            auto Y_ox   = to_vec(Y_ox_arr);
+            return equivalence_ratio_from_bilger_Z_mass(Z, Y_fuel, Y_ox);
+        },
+        py::arg("Z"),
+        py::arg("Y_fuel"),
+        py::arg("Y_ox"),
+        "Convert Bilger mixture fraction Z to mass-basis equivalence ratio phi for fuel/oxidizer streams.");
+
+    // Inverse temperature calculations
+    m.def(
+        "calc_T_from_h",
+        [](double h_target,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double T_guess,
+           double tol,
+           int max_iter)
+        {
+            auto X = to_vec(X_arr);
+            return calc_T_from_h(h_target, X, T_guess, tol, max_iter);
+        },
+        py::arg("h_target"),
+        py::arg("X"),
+        py::arg("T_guess") = 300.0,
+        py::arg("tol") = 1.0e-6,
+        py::arg("max_iter") = 50,
+        "Solve for temperature T given target enthalpy h_target and composition X."
+    );
+
+    m.def(
+        "calc_T_from_s",
+        [](double s_target,
+           double P,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double T_guess,
+           double tol,
+           int max_iter)
+        {
+            auto X = to_vec(X_arr);
+            return calc_T_from_s(s_target, P, X, T_guess, tol, max_iter);
+        },
+        py::arg("s_target"),
+        py::arg("P"),
+        py::arg("X"),
+        py::arg("T_guess") = 300.0,
+        py::arg("tol") = 1.0e-6,
+        py::arg("max_iter") = 50,
+        "Solve for temperature T given target entropy s_target, pressure P, and composition X."
+    );
+
+    m.def(
+        "calc_T_from_cp",
+        [](double cp_target,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double T_guess,
+           double tol,
+           int max_iter)
+        {
+            auto X = to_vec(X_arr);
+            return calc_T_from_cp(cp_target, X, T_guess, tol, max_iter);
+        },
+        py::arg("cp_target"),
+        py::arg("X"),
+        py::arg("T_guess") = 300.0,
+        py::arg("tol") = 1.0e-6,
+        py::arg("max_iter") = 50,
+        "Solve for temperature T given target Cp cp_target and composition X."
+    );
+
+    // Oxygen requirement helpers (scalar fuel index and mixtures)
+    m.def(
+        "oxygen_required_per_mol_fuel",
+        &oxygen_required_per_mol_fuel,
+        py::arg("fuel_index"),
+        "Moles O2 required per mole of pure fuel species (by index)."
+    );
+
+    m.def(
+        "oxygen_required_per_kg_fuel",
+        &oxygen_required_per_kg_fuel,
+        py::arg("fuel_index"),
+        "Mass of O2 [kg] required per kg of pure fuel species (by index)."
+    );
+
+    m.def(
+        "oxygen_required_per_mol_mixture",
+        [](py::array_t<double, py::array::c_style | py::array::forcecast> X_arr)
+        {
+            auto X = to_vec(X_arr);
+            return oxygen_required_per_mol_mixture(X);
+        },
+        py::arg("X"),
+        "Moles O2 required per mole of fuel mixture with mole fractions X."
+    );
+
+    m.def(
+        "oxygen_required_per_kg_mixture",
+        [](py::array_t<double, py::array::c_style | py::array::forcecast> X_arr)
+        {
+            auto X = to_vec(X_arr);
+            return oxygen_required_per_kg_mixture(X);
+        },
+        py::arg("X"),
+        "Mass of O2 [kg] required per kg of fuel mixture with mole fractions X."
+    );
+
+    // Complete combustion helper
+    m.def(
+        "complete_combustion_to_CO2_H2O",
+        [](py::array_t<double, py::array::c_style | py::array::forcecast> X_arr)
+        {
+            auto X = to_vec(X_arr);
+            return complete_combustion_to_CO2_H2O(X);
+        },
+        py::arg("X"),
+        "Complete combustion of mixture X to CO2 and H2O (returns product mole fractions)."
+    );
+
+    m.def(
+        "complete_combustion_to_CO2_H2O_with_fraction",
+        [](py::array_t<double, py::array::c_style | py::array::forcecast> X_arr)
+        {
+            auto X = to_vec(X_arr);
+            double f = 0.0;
+            auto X_out = complete_combustion_to_CO2_H2O(X, f);
+            return py::make_tuple(X_out, f);
+        },
+        py::arg("X"),
+        "Complete combustion of mixture X to CO2 and H2O, returning (product mole fractions, fuel burn fraction f)."
+    );
 
     m.def(
         "adiabatic_T_wgs",

@@ -900,6 +900,80 @@ std::vector<double> set_equivalence_ratio_mass(
     return Y_mix;
 }
 
+double bilger_stoich_mixture_fraction_mass(
+    const std::vector<double>& Y_F,
+    const std::vector<double>& Y_O)
+{
+    // r_st = (F/O)_st on a MASS basis
+    // already implemented as part of equivalence_ratio_mass helpers:
+    const double r_st = stoich_f_over_o_mass(Y_F, Y_O);
+
+    if (r_st <= 0.0) {
+        throw std::runtime_error(
+            "bilger_stoich_mixture_fraction_mass: r_st <= 0");
+    }
+
+    // For 2-stream fuel/oxidizer mixing we always have:
+    //
+    //     Z = m_F / (m_F + m_O)
+    //     r = m_F / m_O
+    //
+    //  =>  Z = r / (1 + r)
+    //
+    // At stoichiometry r = r_st, giving:
+    //
+    //     Z_st = r_st / (1 + r_st)
+    //
+    return r_st / (1.0 + r_st);
+}
+
+double bilger_Z_from_equivalence_ratio_mass(
+    double phi,
+    const std::vector<double>& Y_F,
+    const std::vector<double>& Y_O)
+{
+    if (phi <= 0.0) {
+        throw std::invalid_argument(
+            "bilger_Z_from_equivalence_ratio_mass: phi must be > 0");
+    }
+
+    const double r_st = stoich_f_over_o_mass(Y_F, Y_O);
+    if (r_st <= 0.0) {
+        throw std::runtime_error(
+            "bilger_Z_from_equivalence_ratio_mass: r_st <= 0");
+    }
+
+    // r = (F/O)_act (mass) = phi * r_st
+    const double r = phi * r_st;
+
+    // Two-stream mixing relation on a mass basis:
+    //   Z = r / (1 + r)
+    return r / (1.0 + r);
+}
+
+double equivalence_ratio_from_bilger_Z_mass(
+    double Z,
+    const std::vector<double>& Y_F,
+    const std::vector<double>& Y_O)
+{
+    if (Z <= 0.0 || Z >= 1.0) {
+        throw std::invalid_argument(
+            "equivalence_ratio_from_bilger_Z_mass: Z must be in (0, 1)");
+    }
+
+    const double r_st = stoich_f_over_o_mass(Y_F, Y_O);
+    if (r_st <= 0.0) {
+        throw std::runtime_error(
+            "equivalence_ratio_from_bilger_Z_mass: r_st <= 0");
+    }
+
+    // Invert Z = r / (1 + r) -> r = Z / (1 - Z)
+    const double r = Z / (1.0 - Z);
+
+    // phi = (F/O)_act / (F/O)_st = r / r_st
+    return r / r_st;
+}
+
 // Implementation of collision integral tables
 
 // Collision integral lookup tables based on Cantera's MMCollisionInt
