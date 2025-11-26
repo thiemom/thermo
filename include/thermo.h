@@ -17,8 +17,8 @@ constexpr double PI = 3.14159265358979323846;
 double J_per_mol_to_J_per_kg(double value, double molar_mass);
 
 // Species name lookup functions
-std::string species_name(int species_index);
-int species_index_from_name(const std::string& name);
+std::string species_name(std::size_t species_index);
+std::size_t species_index_from_name(const std::string& name);
 
 // Mixture properties
 double mwmix(const std::vector<double>& X);
@@ -36,7 +36,7 @@ double g_over_RT(int species_idx, double T);
 // Thermodynamic properties
 double cp(double T, const std::vector<double>& X);
 double h(double T, const std::vector<double>& X);
-double s(double T, double P, const std::vector<double>& X);
+double s(double T, const std::vector<double>& X, double P, double P_ref = 101325.0);
 double cv(double T, const std::vector<double>& X);
 double density(double T, double P, const std::vector<double>& X);
 double specific_gas_constant(const std::vector<double>& X);
@@ -44,8 +44,8 @@ double isentropic_expansion_coefficient(double T, const std::vector<double>& X);
 double speed_of_sound(double T, const std::vector<double>& X);
 
 // Combustion calculations
-double oxygen_required_per_mol_fuel(int fuel_index);
-double oxygen_required_per_kg_fuel(int fuel_index);
+double oxygen_required_per_mol_fuel(std::size_t fuel_index);
+double oxygen_required_per_kg_fuel(std::size_t fuel_index);
 double oxygen_required_per_mol_mixture(const std::vector<double>& X);
 double oxygen_required_per_kg_mixture(const std::vector<double>& X);
 

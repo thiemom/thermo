@@ -116,7 +116,7 @@ int main() {
     // Calculate properties
     double cp_value = cp(example_T, X);
     double h_value = h(example_T, X);
-    double s_value = s(example_T, pressure, X);
+    double s_value = s(example_T, X, pressure);
     double rho_value = density(example_T, pressure, X);
     double mu_value = viscosity(example_T, pressure, X);
     double k_value = thermal_conductivity(example_T, pressure, X);

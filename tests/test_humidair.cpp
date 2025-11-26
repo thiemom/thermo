@@ -77,8 +77,8 @@ TEST_F(HumidAirTest, StandardDryAirComposition) {
     
     // Check specific components if they exist
     try {
-        int n2_idx = species_index_from_name("N2");
-        int o2_idx = species_index_from_name("O2");
+        const std::size_t n2_idx = species_index_from_name("N2");
+        const std::size_t o2_idx = species_index_from_name("O2");
         
         // N2 should be the dominant component (~78%)
         EXPECT_GT(dry_air[n2_idx], 0.7);
@@ -90,7 +90,7 @@ TEST_F(HumidAirTest, StandardDryAirComposition) {
         
         // H2O should be zero for dry air
         if (species_index.count("H2O")) {
-            int h2o_idx = species_index_from_name("H2O");
+            const std::size_t h2o_idx = species_index_from_name("H2O");
             EXPECT_NEAR(dry_air[h2o_idx], 0.0, 1e-6);
         }
     } catch (...) {

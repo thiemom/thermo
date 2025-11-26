@@ -23,7 +23,7 @@ protected:
             air_composition[species_index_from_name("N2")] = 0.78;
             air_composition[species_index_from_name("O2")] = 0.21;
             if (species_index.count("AR") || species_index.count("Ar")) {
-                int ar_idx = species_index.count("AR") ? species_index_from_name("AR") : species_index_from_name("Ar");
+                const std::size_t ar_idx = species_index.count("AR") ? species_index_from_name("AR") : species_index_from_name("Ar");
                 air_composition[ar_idx] = 0.01;
             }
         } catch (...) {
@@ -38,7 +38,7 @@ protected:
         // Humid air: similar to air but with water
         humid_air = air_composition;
         try {
-            int h2o_idx = species_index_from_name("H2O");
+            const std::size_t h2o_idx = species_index_from_name("H2O");
             // Reduce others by 4% and add 4% water
             for (auto& val : humid_air) val *= 0.96;
             humid_air[h2o_idx] = 0.04;
@@ -173,7 +173,7 @@ TEST_F(ThermoTransportTest, BasicThermodynamicProperties) {
     EXPECT_TRUE(std::isfinite(h_value));
     
     // Test entropy - should be positive and finite
-    double s_value = s(T, P, air_composition);
+    double s_value = s(T, air_composition, P);
     EXPECT_GT(s_value, 100.0);
     EXPECT_TRUE(std::isfinite(s_value));
     
@@ -217,8 +217,8 @@ TEST_F(ThermoTransportTest, TransportProperties) {
 static std::vector<double> make_CH4_O2_mixture(double n_CH4, double n_O2) {
     std::vector<double> X(species_names.size(), 0.0);
 
-    int idx_CH4 = species_index_from_name("CH4");
-    int idx_O2  = species_index_from_name("O2");
+    const std::size_t idx_CH4 = species_index_from_name("CH4");
+    const std::size_t idx_O2  = species_index_from_name("O2");
 
     double n_tot = n_CH4 + n_O2;
     X[idx_CH4] = n_CH4 / n_tot;
@@ -243,10 +243,10 @@ TEST_F(ThermoTransportTest, Combustion_StoichiometricOxygen) {
     // 1 mol CH4, 2 mol O2
     auto X_in = make_CH4_O2_mixture(1.0, 2.0);
 
-    int idx_CO2 = species_index_from_name("CO2");
-    int idx_H2O = species_index_from_name("H2O");
-    int idx_O2  = species_index_from_name("O2");
-    int idx_CH4 = species_index_from_name("CH4");
+    const std::size_t idx_CO2 = species_index_from_name("CO2");
+    const std::size_t idx_H2O = species_index_from_name("H2O");
+    const std::size_t idx_O2  = species_index_from_name("O2");
+    const std::size_t idx_CH4 = species_index_from_name("CH4");
 
     double f = -1.0;
     auto X_out = complete_combustion_to_CO2_H2O(X_in, f);

@@ -11,19 +11,19 @@ double J_per_mol_to_J_per_kg(double value, double molar_mass) {
 }
 
 // Species name lookup functions
-std::string species_name(int species_index) {
-    if (species_index < 0 || species_index >= static_cast<int>(species_names.size())) {
+std::string species_name(std::size_t species_index) {
+    if (species_index >= species_names.size()) {
         throw std::out_of_range("Species index out of range");
     }
     return species_names[species_index];
 }
 
-int species_index_from_name(const std::string& name) {
+std::size_t species_index_from_name(const std::string& name) {
     auto it = species_index.find(name);
     if (it == species_index.end()) {
         throw std::out_of_range("Species name not found: " + name);
     }
-    return it->second;
+    return static_cast<std::size_t>(it->second);
 }
 
 // Calculate mixture molecular weight [g/mol]
@@ -67,6 +67,11 @@ double cp_R(int species_idx, double T) {
     // NASA polynomial for Cp/R: a1 + a2*T + a3*T^2 + a4*T^3 + a5*T^4
     return (*coeffs)[0] + (*coeffs)[1] * T + (*coeffs)[2] * T * T + 
            (*coeffs)[3] * T * T * T + (*coeffs)[4] * T * T * T * T;
+}
+
+// Cv/R = Cp/R - 1
+inline double cv_R(int species_idx, double T) {
+    return cp_R(species_idx, T) - 1.0;
 }
 
 // NASA polynomial evaluation for H/RT
@@ -146,11 +151,11 @@ double species_molar_mass(int species_index) {
     if (species_index < 0 || static_cast<std::size_t>(species_index) >= molar_masses.size()) {
         throw std::out_of_range("species_molar_mass: species_index out of range");
     }
-    return molar_masses[static_cast<std::size_t>(species_index)];
+    return molar_masses[species_index];
 }
 
 double species_molar_mass_from_name(const std::string& name) {
-    const int idx = species_index_from_name(name);
+    const std::size_t idx = species_index_from_name(name);
     return species_molar_mass(idx);
 }
 
@@ -162,7 +167,7 @@ double cp(double T, const std::vector<double>& X) {
     
     double cp_mix = 0.0;
     for (std::size_t i = 0; i < X.size(); ++i) {
-        cp_mix += X[i] * cp_R(static_cast<int>(i), T) * R_GAS;
+        cp_mix += X[i] * cp_R(i, T) * R_GAS;
     }
     return cp_mix;
 }
@@ -175,25 +180,24 @@ double h(double T, const std::vector<double>& X) {
     
     double h_mix = 0.0;
     for (std::size_t i = 0; i < X.size(); ++i) {
-        h_mix += X[i] * h_RT(static_cast<int>(i), T) * R_GAS * T;
+        h_mix += X[i] * h_RT(i, T) * R_GAS * T;
     }
     return h_mix;
 }
 
 // Calculate entropy [J/(mol·K)]
-double s(double T, double P, const std::vector<double>& X) {
+double s(double T, const std::vector<double>& X, double P, double P_ref) {
     if (X.size() != species_names.size()) {
         throw std::invalid_argument("Mole fraction vector size does not match number of species");
     }
     
     double s_mix = 0.0;
-    double P_ref = 101325.0; // Reference pressure [Pa]
     
     // Calculate pure species entropies and mixing term
     for (std::size_t i = 0; i < X.size(); ++i) {
         if (X[i] > 0.0) {
             // Pure species entropy at reference pressure
-            double s_i = s_R(static_cast<int>(i), T) * R_GAS;
+            double s_i = s_R(i, T) * R_GAS;
             
             // Pressure correction: -R * ln(P/P_ref)
             s_i -= R_GAS * std::log(P / P_ref);
@@ -227,7 +231,7 @@ double ds_dT(double T, const std::vector<double>& X) {
     }
     
     double ds_dT_mix = 0.0;
-    for (size_t i = 0; i < X.size(); ++i) {
+    for (std::size_t i = 0; i < X.size(); ++i) {
         if (X[i] > 0.0) {
             // Derivative of NASA polynomial for S/R with respect to T
             const NASA_Coeffs& nasa = nasa_coeffs[i];
@@ -263,7 +267,7 @@ double dcp_dT(double T, const std::vector<double>& X) {
     }
     
     double dcp_dT_mix = 0.0;
-    for (size_t i = 0; i < X.size(); ++i) {
+    for (std::size_t i = 0; i < X.size(); ++i) {
         const NASA_Coeffs& nasa = nasa_coeffs[i];
         
         const std::vector<double>* coeffs;
@@ -331,9 +335,9 @@ double speed_of_sound(double T, const std::vector<double>& X) {
 }
 
 // Calculate oxygen required for complete combustion [mol O2/mol fuel]
-double oxygen_required_per_mol_fuel(int fuel_index) {
+double oxygen_required_per_mol_fuel(std::size_t fuel_index) {
     // Validate fuel index
-    if (fuel_index < 0 || fuel_index >= static_cast<int>(molecular_structures.size())) {
+    if (fuel_index >= molecular_structures.size()) {
         throw std::runtime_error("Invalid fuel index");
     }
     
@@ -351,9 +355,9 @@ double oxygen_required_per_mol_fuel(int fuel_index) {
 }
 
 // Calculate oxygen required for complete combustion [kg O2/kg fuel]
-double oxygen_required_per_kg_fuel(int fuel_index) {
+double oxygen_required_per_kg_fuel(std::size_t fuel_index) {
     // Validate fuel index
-    if (fuel_index < 0 || fuel_index >= static_cast<int>(molar_masses.size())) {
+    if (fuel_index >= molar_masses.size()) {
         throw std::runtime_error("Invalid fuel index");
     }
     
@@ -739,12 +743,11 @@ double calc_T_from_h(double h_target, const std::vector<double>& X, double T_gue
         
         // Check for division by zero
         if (std::abs(dh_dT_val) < 1.0e-10) {
-            // If derivative is too small, use bisection-like approach
-            if (h_val < h_target) {
-                T = std::min(T * 1.1, T_max); // Increase T by 10% but stay within bounds
-            } else {
-                T = std::max(T * 0.9, T_min); // Decrease T by 10% but stay within bounds
-            }
+            // If derivative is too small, use a guarded multiplicative step
+            const double factor = (h_val < h_target) ? 1.1 : 0.9;
+            T *= factor;
+            if (T < T_min) T = T_min;
+            if (T > T_max) T = T_max;
             continue;
         }
         
@@ -806,17 +809,16 @@ double calc_T_from_s(double s_target, double P, const std::vector<double>& X, do
     
     for (int iter = 0; iter < max_iter; ++iter) {
         // Calculate s and ds/dT at current temperature
-        s_val = s(T, P, X);
+        s_val = s(T, X, P);
         ds_dT_val = ds_dT(T, X);
         
         // Check for division by zero
         if (std::abs(ds_dT_val) < 1.0e-10) {
-            // If derivative is too small, use bisection-like approach
-            if (s_val < s_target) {
-                T = std::min(T * 1.1, T_max); // Increase T by 10% but stay within bounds
-            } else {
-                T = std::max(T * 0.9, T_min); // Decrease T by 10% but stay within bounds
-            }
+            // If derivative is too small, use a guarded multiplicative step
+            const double factor = (s_val < s_target) ? 1.1 : 0.9;
+            T *= factor;
+            if (T < T_min) T = T_min;
+            if (T > T_max) T = T_max;
             continue;
         }
         
@@ -878,12 +880,11 @@ double calc_T_from_cp(double cp_target, const std::vector<double>& X, double T_g
         
         // Check for division by zero
         if (std::abs(dcp_dT_val) < 1.0e-10) {
-            // If derivative is too small, use bisection-like approach
-            if (cp_val < cp_target) {
-                T = std::min(T * 1.1, T_max); // Increase T by 10% but stay within bounds
-            } else {
-                T = std::max(T * 0.9, T_min); // Decrease T by 10% but stay within bounds
-            }
+            // If derivative is too small, use a guarded multiplicative step
+            const double factor = (cp_val < cp_target) ? 1.1 : 0.9;
+            T *= factor;
+            if (T < T_min) T = T_min;
+            if (T > T_max) T = T_max;
             continue;
         }
         
@@ -1000,7 +1001,7 @@ void print_mixture_properties(double T, double P, const std::vector<double>& X) 
     std::cout << "Isentropic Expansion Coefficient (gamma): " << isentropic_expansion_coefficient(T, X) << std::endl;
     std::cout << "Speed of Sound: " << speed_of_sound(T, X) << " m/s" << std::endl;
     std::cout << "Enthalpy: " << h(T, X) << " J/mol" << std::endl;
-    std::cout << "Entropy: " << s(T, P, X) << " J/(mol·K)" << std::endl;
+    std::cout << "Entropy: " << s(T, X, P) << " J/(mol·K)" << std::endl;
     std::cout << "Heat Capacity (Cp): " << cp(T, X) << " J/(mol·K)" << std::endl;
     std::cout << "Heat Capacity (Cv): " << cv(T, X) << " J/(mol·K)" << std::endl;
     

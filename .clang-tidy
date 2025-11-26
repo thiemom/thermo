@@ -11,9 +11,9 @@ Checks: >
   modernize-*,
   # Readability and basic style
   readability-*,
-  # A subset of C++ Core Guidelines (you can tighten/loosen later)
+  # A subset of C++ Core Guidelines 
   cppcoreguidelines-*, 
-  # But disable rules that fight with your style or are project-specific
+  # But disable rules that fight with style or are project-specific
   -clang-diagnostic-c++17-extensions,
   -myproject-no-system-algorithm,
   -llvm-*,
@@ -21,9 +21,11 @@ Checks: >
   -google-*,
   -hicpp-*,
   -zircon-*,
-  # If any of these become noisy, you can turn them off too:
+  # If any of these become noisy, turn them off:
   -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-owning-memory,
-  -cppcoreguidelines-pro-type-reinterpret-cast
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -bugprone-easily-swappable-parameters,
+  -performance-avoid-endl
 
 WarningsAsErrors: ''

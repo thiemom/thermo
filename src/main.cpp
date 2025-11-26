@@ -41,7 +41,7 @@ int main() {
     std::cout << "----------------------------------------" << std::endl;
     std::cout << "Specific Heat (Cp): " << cp(T, X) << " J/(mol·K)" << std::endl;
     std::cout << "Enthalpy (H): " << h(T, X) << " J/mol" << std::endl;
-    std::cout << "Entropy (S): " << s(T, P, X) << " J/(mol·K)" << std::endl;
+    std::cout << "Entropy (S): " << s(T, X, P) << " J/(mol·K)" << std::endl;
     std::cout << "Density: " << density(T, P, X) << " kg/m³" << std::endl;
     std::cout << "Viscosity: " << viscosity(T, P, X) * 1.0e6 << " μPa·s" << std::endl;
     std::cout << "Thermal Conductivity: " << thermal_conductivity(T, P, X) << " W/(m·K)" << std::endl;

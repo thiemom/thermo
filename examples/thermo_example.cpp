@@ -21,10 +21,10 @@ int main() {
     std::vector<double> X(species_names.size(), 0.0);
     
     // Get species indices
-    int o2_idx = species_index_from_name("O2");
-    int n2_idx = species_index_from_name("N2");
-    int ch4_idx = species_index_from_name("CH4");
-    int h2_idx = species_index_from_name("H2");
+    const std::size_t o2_idx  = species_index_from_name("O2");
+    const std::size_t n2_idx  = species_index_from_name("N2");
+    const std::size_t ch4_idx = species_index_from_name("CH4");
+    const std::size_t h2_idx  = species_index_from_name("H2");
     
     std::cout << "=========================================" << std::endl;
     std::cout << "Thermodynamic and Transport Properties" << std::endl;
@@ -77,7 +77,7 @@ int main() {
     
     // For each fuel in the system
     for (const auto& fuel_name : {"CH4", "H2"}) {
-        int fuel_idx = species_index_from_name(fuel_name);
+        const std::size_t fuel_idx = species_index_from_name(fuel_name);
         std::cout << "Fuel: " << fuel_name << std::endl;
         std::cout << "  Molecular structure: C=" << molecular_structures[fuel_idx].C 
                   << ", H=" << molecular_structures[fuel_idx].H 
@@ -114,7 +114,7 @@ int main() {
     
     // Calculate properties at the reference temperature
     double h_ref = h(T_ref, X);
-    double s_ref = s(T_ref, P, X);
+    double s_ref = s(T_ref, X, P);
     double cp_ref = cp(T_ref, X);
     
     // Solve for temperature given enthalpy

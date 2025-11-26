@@ -17,8 +17,8 @@ constexpr double PI = 3.14159265358979323846;
 double J_per_mol_to_J_per_kg(double value, double molar_mass);
 
 // Species metadata and lookup functions
-std::string species_name(int species_index);
-int species_index_from_name(const std::string& name);
+std::string species_name(std::size_t species_index);
+std::size_t species_index_from_name(const std::string& name);
 
 // Number of thermo species in the internal data tables
 std::size_t num_species();
@@ -32,10 +32,12 @@ double mwmix(const std::vector<double>& X);
 
 // NASA polynomial evaluations
 // cp_R      : dimensionless heat capacity Cp/R
+// cv_R      : dimensionless heat capacity Cv/R
 // h_RT      : dimensionless enthalpy  H/(R*T)
 // s_R       : dimensionless entropy   S/R at reference pressure and pure species
 // g_over_RT : dimensionless Gibbs free energy G/(R*T) = H/(R*T) - S/R
 double cp_R(int species_idx, double T);
+double cv_R(int species_idx, double T);
 double h_RT(int species_idx, double T);
 double s_R(int species_idx, double T);
 double g_over_RT(int species_idx, double T);
@@ -43,7 +45,7 @@ double g_over_RT(int species_idx, double T);
 // Thermodynamic properties
 double cp(double T, const std::vector<double>& X);
 double h(double T, const std::vector<double>& X);
-double s(double T, double P, const std::vector<double>& X);
+double s(double T, const std::vector<double>& X, double P, double P_ref = 101325.0);
 double cv(double T, const std::vector<double>& X);
 double density(double T, double P, const std::vector<double>& X);
 double specific_gas_constant(const std::vector<double>& X);
@@ -51,8 +53,8 @@ double isentropic_expansion_coefficient(double T, const std::vector<double>& X);
 double speed_of_sound(double T, const std::vector<double>& X);
 
 // Combustion calculations
-double oxygen_required_per_mol_fuel(int fuel_index);
-double oxygen_required_per_kg_fuel(int fuel_index);
+double oxygen_required_per_mol_fuel(std::size_t fuel_index);
+double oxygen_required_per_kg_fuel(std::size_t fuel_index);
 double oxygen_required_per_mol_mixture(const std::vector<double>& X);
 double oxygen_required_per_kg_mixture(const std::vector<double>& X);
 
@@ -101,9 +103,9 @@ std::vector<double> normalize_fractions(const std::vector<double>& fractions);
 // Returns all zeros with a warning if input contains only water vapor
 std::vector<double> convert_to_dry_fractions(const std::vector<double>& mole_fractions);
 
-// Combustion calculations
-double oxygen_required_per_mol_fuel(int fuel_index);
-double oxygen_required_per_kg_fuel(int fuel_index);
+// Combustion calculations (duplicate declarations for convenience)
+double oxygen_required_per_mol_fuel(std::size_t fuel_index);
+double oxygen_required_per_kg_fuel(std::size_t fuel_index);
 double oxygen_required_per_mol_mixture(const std::vector<double>& X);
 double oxygen_required_per_kg_mixture(const std::vector<double>& X);
 

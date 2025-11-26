@@ -68,6 +68,7 @@ Icon?
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.cache/
 
 # Python build output
 dist/

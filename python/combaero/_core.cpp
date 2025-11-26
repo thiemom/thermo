@@ -11,10 +11,10 @@ namespace py = pybind11;
 static combaero::equilibrium::WgsConfig make_wgs_cfg()
 {
     combaero::equilibrium::WgsConfig cfg{};
-    cfg.i_CO  = static_cast<std::size_t>(species_index_from_name("CO"));
-    cfg.i_H2O = static_cast<std::size_t>(species_index_from_name("H2O"));
-    cfg.i_CO2 = static_cast<std::size_t>(species_index_from_name("CO2"));
-    cfg.i_H2  = static_cast<std::size_t>(species_index_from_name("H2"));
+    cfg.i_CO  = species_index_from_name("CO");
+    cfg.i_H2O = species_index_from_name("H2O");
+    cfg.i_CO2 = species_index_from_name("CO2");
+    cfg.i_H2  = species_index_from_name("H2");
     return cfg;
 }
 
