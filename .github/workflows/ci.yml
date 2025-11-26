@@ -25,6 +25,7 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v1
 
       - name: Configure
+        shell: bash
         run: |
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
