@@ -6,6 +6,11 @@
 #include <numeric>
 #include <iostream>
 
+// Core thermo implementations have been moved to src/thermo.cpp.
+// The old versions are kept below under an #if 0 block for reference
+// during the refactor and can be deleted once the split is stable.
+
+#if 0
 // Conversion factor from J/mol to J/kg
 double J_per_mol_to_J_per_kg(double value, double molar_mass) {
     return value * 1000.0 / molar_mass; // molar_mass is in g/mol, convert to kg/mol
@@ -293,6 +298,8 @@ double dcp_dT(double T, const std::vector<double>& X) {
     
     return dcp_dT_mix;
 }
+
+#endif
 
 // Calculate density [kg/m^3]
 double density(double T, double P, const std::vector<double>& X) {
