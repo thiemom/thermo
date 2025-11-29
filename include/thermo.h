@@ -71,10 +71,6 @@ double calc_T_from_h(double h_target, const std::vector<double>& X, double T_gue
 double calc_T_from_s(double s_target, double P, const std::vector<double>& X, double T_guess = 300.0, double tol = 1.0e-6, std::size_t max_iter = 50);
 double calc_T_from_cp(double cp_target, const std::vector<double>& X, double T_guess = 300.0, double tol = 1.0e-6, std::size_t max_iter = 50);
 
-// Utility functions
-// TODO: MOVE TO NEW utils.h
-void print_mixture_properties(double T, double P, const std::vector<double>& X);
-
 // Normalize a vector of fractions to sum to 1.0
 // Returns all zeros with a warning if input contains all zeros
 std::vector<double> normalize_fractions(const std::vector<double>& fractions);

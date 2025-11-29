@@ -1,6 +1,7 @@
 #include "../include/thermo.h"
 #include "../include/transport.h"
 #include "../include/combustion.h"
+#include "../include/utils.h"
 #include <iostream>
 #include <vector>
 #include <iomanip>
