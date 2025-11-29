@@ -189,6 +189,19 @@ double g_over_RT(std::size_t species_idx, double T) {
     return h_RT(species_idx, T) - s_R(species_idx, T);
 }
 
+// Per-species dimensional properties
+double cp_species(std::size_t species_idx, double T) {
+    return cp_R(species_idx, T) * R_GAS;
+}
+
+double h_species(std::size_t species_idx, double T) {
+    return h_RT(species_idx, T) * R_GAS * T;
+}
+
+double s_species(std::size_t species_idx, double T) {
+    return s_R(species_idx, T) * R_GAS;
+}
+
 // Number of thermo species used in the internal tables
 std::size_t num_species() {
     return species_names.size();

@@ -198,6 +198,27 @@ TEST_F(ThermoTransportTest, MolecularWeight) {
     EXPECT_LT(mw, 100.0); // Heavier than most common mixtures
 }
 
+// Test per-species dimensional properties
+TEST_F(ThermoTransportTest, PerSpeciesProperties) {
+    double T = 300.0;
+    std::size_t i_N2 = species_index_from_name("N2");
+    
+    // cp_species = cp_R * R
+    double cp_dim = cp_species(i_N2, T);
+    double cp_nondim = cp_R(i_N2, T);
+    EXPECT_NEAR(cp_dim, cp_nondim * 8.31446261815324, 1.0e-10);
+    
+    // h_species = h_RT * R * T
+    double h_dim = h_species(i_N2, T);
+    double h_nondim = h_RT(i_N2, T);
+    EXPECT_NEAR(h_dim, h_nondim * 8.31446261815324 * T, 1.0e-6);
+    
+    // s_species = s_R * R
+    double s_dim = s_species(i_N2, T);
+    double s_nondim = s_R(i_N2, T);
+    EXPECT_NEAR(s_dim, s_nondim * 8.31446261815324, 1.0e-10);
+}
+
 // Test transport properties
 TEST_F(ThermoTransportTest, TransportProperties) {
     // Test at 300 K to avoid boundary warnings

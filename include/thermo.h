@@ -40,7 +40,7 @@ std::vector<double> mass_to_mole(const std::vector<double>& Y);
 // Mixture properties
 double mwmix(const std::vector<double>& X);
 
-// NASA polynomial evaluations
+// NASA polynomial evaluations (dimensionless)
 // cp_R  : dimensionless heat capacity Cp/R
 // h_RT  : dimensionless enthalpy  H/(R*T)
 // s_R   : dimensionless entropy   S/R at reference pressure and pure species
@@ -49,6 +49,11 @@ double cp_R(std::size_t species_idx, double T);
 double h_RT(std::size_t species_idx, double T);
 double s_R(std::size_t species_idx, double T);
 double g_over_RT(std::size_t species_idx, double T);
+
+// Per-species dimensional properties
+double cp_species(std::size_t species_idx, double T);  // [J/(mol·K)]
+double h_species(std::size_t species_idx, double T);   // [J/mol]
+double s_species(std::size_t species_idx, double T);   // [J/(mol·K)] at P_ref
 
 // Thermodynamic properties
 double cp(double T, const std::vector<double>& X);
