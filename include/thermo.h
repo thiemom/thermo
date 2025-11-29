@@ -55,6 +55,7 @@ double cp(double T, const std::vector<double>& X);
 double h(double T, const std::vector<double>& X);
 double s(double T, const std::vector<double>& X, double P, double P_ref = 101325.0);
 double cv(double T, const std::vector<double>& X);
+double u(double T, const std::vector<double>& X);  // Internal energy [J/mol]
 double density(double T, double P, const std::vector<double>& X);
 double specific_gas_constant(const std::vector<double>& X);
 double isentropic_expansion_coefficient(double T, const std::vector<double>& X);

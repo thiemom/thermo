@@ -183,6 +183,11 @@ TEST_F(ThermoTransportTest, BasicThermodynamicProperties) {
     double rho = density(T, P, air_composition);
     EXPECT_GT(rho, 0.5);  // Reasonable for any gas mixture
     EXPECT_LT(rho, 5.0);  // Reasonable upper bound
+    
+    // Test internal energy: u = h - R*T for ideal gas
+    double u_value = u(T, air_composition);
+    double expected_u = h_value - 8.31446261815324 * T;
+    EXPECT_NEAR(u_value, expected_u, 1.0e-6);
 }
 
 // Test molecular weight calculation

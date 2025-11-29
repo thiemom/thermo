@@ -266,6 +266,12 @@ double cv(double T, const std::vector<double>& X) {
     return cp(T, X) - R_GAS;
 }
 
+// Calculate internal energy [J/mol]
+// For ideal gas: u = h - R*T
+double u(double T, const std::vector<double>& X) {
+    return h(T, X) - R_GAS * T;
+}
+
 // Calculate derivative of enthalpy with respect to temperature [J/(mol·K)]
 // For ideal gas, this is the same as Cp
 double dh_dT(double T, const std::vector<double>& X) {
