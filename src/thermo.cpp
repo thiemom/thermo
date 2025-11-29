@@ -1,10 +1,13 @@
 #include "../include/thermo.h"
-#include <cmath>
-#include <stdexcept>
 #include <algorithm>
-#include <numeric>
+#include <cmath>
 #include <iostream>
+#include <numeric>
+#include <stdexcept>
 
+using combaero::thermo::R_GAS;
+using combaero::thermo::BOLTZMANN;
+using combaero::thermo::AVOGADRO;
 
 // Conversion factor from J/mol to J/kg
 double J_per_mol_to_J_per_kg(double value, double molar_mass) {

@@ -5,9 +5,6 @@
 #include <cstddef>
 #include <vector>
 
-// TODO: wrap this in namespace combaero::combustion similar to equilibrium.h
-
-
 // Combustion calculations
 double oxygen_required_per_mol_fuel(std::size_t fuel_index);
 double oxygen_required_per_kg_fuel(std::size_t fuel_index);

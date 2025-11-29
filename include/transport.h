@@ -5,8 +5,6 @@
 #include "thermo_transport_data.h"
 #include <vector>
 
-// TODO: wrap this in namespace combaero::transport similar to thermo.h
-
 // Collision integral functions
 double linear_interp(double x, const std::vector<double>& x_values, const std::vector<double>& y_values);
 double omega22(double T, double well_depth);

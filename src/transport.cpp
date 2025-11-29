@@ -1,10 +1,13 @@
 #include "../include/transport.h"
 #include <cmath>
-#include <stdexcept>
 #include <numeric>
+#include <stdexcept>
+
+using combaero::thermo::R_GAS;
+using combaero::thermo::BOLTZMANN;
+using combaero::thermo::AVOGADRO;
 
 // Transport-related helpers factored out of thermo_transport.cpp.
-// Public API remains declared in thermo_transport.h / thermo.h.
 
 // Linear interpolation helper for collision integrals
 double linear_interp(double x,

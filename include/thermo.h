@@ -6,14 +6,18 @@
 #include <string>
 #include <vector>
 
-// TODO: wrap this in namespace combaero::thermo similar to equilibrium.h
+namespace combaero::thermo {
 
 // Universal gas constant [J/(mol·K)]
 constexpr double R_GAS = 8.31446261815324;
 
-// Constants needed for collision integrals
-constexpr double BOLTZMANN = 1.380649e-23;  // J/K, Boltzmann constant
-constexpr double AVOGADRO = 6.02214076e23;  // 1/mol, Avogadro's number
+// Boltzmann constant [J/K]
+constexpr double BOLTZMANN = 1.380649e-23;
+
+// Avogadro's number [1/mol]
+constexpr double AVOGADRO = 6.02214076e23;
+
+} // namespace combaero::thermo
 
 // Conversion factor from J/mol to J/kg
 double J_per_mol_to_J_per_kg(double value, double molar_mass);
