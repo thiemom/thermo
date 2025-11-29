@@ -1,12 +1,10 @@
 #ifndef THERMO_H
 #define THERMO_H
 
-// TODO: check if imports are needed and update to new refactored structure
-
 #include "thermo_transport_data.h"
 #include <cstddef>
-#include <vector>
 #include <string>
+#include <vector>
 
 // TODO: wrap this in namespace combaero::thermo similar to equilibrium.h
 

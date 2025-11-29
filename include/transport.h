@@ -1,13 +1,9 @@
 #ifndef TRANSPORT_H
 #define TRANSPORT_H
 
-// TODO: check if imports are needed and update to new refactored structure
-
-#include "thermo_transport_data.h"
 #include "thermo.h"
-#include <iterator>
+#include "thermo_transport_data.h"
 #include <vector>
-#include <string>
 
 // TODO: wrap this in namespace combaero::transport similar to thermo.h
 

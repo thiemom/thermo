@@ -1,13 +1,9 @@
 #ifndef COMBUSTION_H
 #define COMBUSTION_H
 
-// TODO: check if imports are needed and update to new refactored structure
 #include "thermo_transport_data.h"
-#include <iterator>
+#include <cstddef>
 #include <vector>
-#include <string>
-
-
 
 // TODO: wrap this in namespace combaero::combustion similar to equilibrium.h
 
