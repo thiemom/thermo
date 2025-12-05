@@ -477,3 +477,40 @@ TEST_F(ThermoTransportTest, Combustion_IntermediateRich) {
     EXPECT_NEAR(X_out[idx_H2O], 1.50 / denom, 1e-8);
     EXPECT_NEAR(X_out[idx_O2],  0.0,          1e-12);
 }
+
+// Test dry air requirements for combustion
+TEST_F(ThermoTransportTest, DryAirRequirements) {
+    const std::size_t idx_CH4 = species_index_from_name("CH4");
+    
+    // CH4 + 2 O2 -> CO2 + 2 H2O
+    // O2 required per mol CH4 = 2
+    double O2_per_mol = oxygen_required_per_mol_fuel(idx_CH4);
+    EXPECT_NEAR(O2_per_mol, 2.0, 1e-10);
+    
+    // Dry air is ~20.95% O2, so air required = O2_required / 0.2095
+    double air_per_mol = dryair_required_per_mol_fuel(idx_CH4);
+    double expected_air = O2_per_mol / 0.2095;
+    EXPECT_NEAR(air_per_mol, expected_air, 1e-10);
+    
+    // Test mass basis consistency
+    double O2_per_kg = oxygen_required_per_kg_fuel(idx_CH4);
+    double air_per_kg = dryair_required_per_kg_fuel(idx_CH4);
+    
+    // Both should be positive
+    EXPECT_GT(O2_per_kg, 0.0);
+    EXPECT_GT(air_per_kg, 0.0);
+    
+    // Air requirement should be larger than O2 requirement (air is ~21% O2)
+    EXPECT_GT(air_per_kg, O2_per_kg);
+    
+    // Test mixture functions with pure CH4
+    const std::size_t n = species_names.size();
+    std::vector<double> X_fuel(n, 0.0);
+    X_fuel[idx_CH4] = 1.0;
+    
+    double air_per_mol_mix = dryair_required_per_mol_mixture(X_fuel);
+    EXPECT_NEAR(air_per_mol_mix, air_per_mol, 1e-10);
+    
+    double air_per_kg_mix = dryair_required_per_kg_mixture(X_fuel);
+    EXPECT_NEAR(air_per_kg_mix, air_per_kg, 1e-10);
+}

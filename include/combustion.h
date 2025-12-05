@@ -5,11 +5,17 @@
 #include <cstddef>
 #include <vector>
 
-// Combustion calculations
+// Combustion calculations - oxygen requirements
 double oxygen_required_per_mol_fuel(std::size_t fuel_index);
 double oxygen_required_per_kg_fuel(std::size_t fuel_index);
 double oxygen_required_per_mol_mixture(const std::vector<double>& X);
 double oxygen_required_per_kg_mixture(const std::vector<double>& X);
+
+// Combustion calculations - dry air requirements (using standard dry air composition)
+double dryair_required_per_mol_fuel(std::size_t fuel_index);
+double dryair_required_per_kg_fuel(std::size_t fuel_index);
+double dryair_required_per_mol_mixture(const std::vector<double>& X);
+double dryair_required_per_kg_mixture(const std::vector<double>& X);
 
 // Equivalence ratio (mole basis) for multi-species fuel + oxidizer.
 // X_* are mole fractions over the same species set as species_names.

@@ -1,4 +1,5 @@
 #include "../include/combustion.h"
+#include "../include/humidair.h"
 #include "../include/thermo.h"
 #include <algorithm>
 #include <cmath>
@@ -93,6 +94,48 @@ double oxygen_required_per_kg_mixture(const std::vector<double>& X) {
     
     // Convert to mass basis: (mol O2/mol mixture) * (g O2/mol O2) / (g mixture/mol mixture)
     return molar_oxygen_required * oxygen_mw / mixture_mw;  // kg O2/kg mixture
+}
+
+// -------------------------------------------------------------
+// Dry air requirements (using standard dry air composition)
+// -------------------------------------------------------------
+
+// Calculate dry air required for complete combustion [mol air/mol fuel]
+double dryair_required_per_mol_fuel(std::size_t fuel_index) {
+    double O2_required = oxygen_required_per_mol_fuel(fuel_index);
+    double X_O2_air = dry_air_composition.at("O2");
+    return O2_required / X_O2_air;
+}
+
+// Calculate dry air required for complete combustion [kg air/kg fuel]
+double dryair_required_per_kg_fuel(std::size_t fuel_index) {
+    if (fuel_index >= molar_masses.size()) {
+        throw std::runtime_error("Invalid fuel index");
+    }
+    
+    double fuel_mw = molar_masses[fuel_index];  // g/mol
+    std::vector<double> X_air = standard_dry_air_composition();
+    double air_mw = mwmix(X_air);  // g/mol
+    
+    double molar_air_required = dryair_required_per_mol_fuel(fuel_index);
+    return molar_air_required * air_mw / fuel_mw;
+}
+
+// Calculate dry air required for complete combustion [mol air/mol mixture]
+double dryair_required_per_mol_mixture(const std::vector<double>& X) {
+    double O2_required = oxygen_required_per_mol_mixture(X);
+    double X_O2_air = dry_air_composition.at("O2");
+    return O2_required / X_O2_air;
+}
+
+// Calculate dry air required for complete combustion [kg air/kg mixture]
+double dryair_required_per_kg_mixture(const std::vector<double>& X) {
+    double mixture_mw = mwmix(X);  // g/mol
+    std::vector<double> X_air = standard_dry_air_composition();
+    double air_mw = mwmix(X_air);  // g/mol
+    
+    double molar_air_required = dryair_required_per_mol_mixture(X);
+    return molar_air_required * air_mw / mixture_mw;
 }
 
 std::vector<double> complete_combustion_to_CO2_H2O(const std::vector<double>& X, double& fuel_burn_fraction) {
