@@ -32,12 +32,39 @@ The library is organized into focused modules:
 
 | Header | Description |
 |--------|-------------|
+| `state.h` | `State` and `Stream` structs for thermodynamic state representation |
 | `thermo.h` | Thermodynamic properties (cp, h, s, density, etc.) and physical constants |
 | `transport.h` | Transport properties (viscosity, thermal conductivity, Prandtl) |
-| `combustion.h` | Combustion calculations (O₂ demand, equivalence ratio, Bilger) |
+| `combustion.h` | Combustion calculations (O₂ demand, equivalence ratio, complete combustion) |
 | `equilibrium.h` | Chemical equilibrium solver (WGS partial equilibrium) |
 | `humidair.h` | Humid air properties and saturation vapor pressure |
 | `utils.h` | Utility functions (mixture property printing) |
+
+### State-based API
+
+The library provides a unified `State` struct for representing thermodynamic states:
+
+```cpp
+struct State {
+    double T;                    // Temperature [K]
+    double P = 101325.0;         // Pressure [Pa]
+    std::vector<double> X;       // Mole fractions [-]
+};
+```
+
+Combustion and equilibrium functions accept and return `State` objects:
+
+```cpp
+State in{300.0, 101325.0, X_unburned};
+
+// Adiabatic complete combustion
+State burned = complete_combustion(in);
+std::cout << "Adiabatic flame T: " << burned.T << " K\n";
+
+// WGS equilibrium (isothermal or adiabatic)
+State eq_iso = wgs_equilibrium(in);
+State eq_ad = wgs_equilibrium_adiabatic(in);
+```
 
 ## Building the Project
 

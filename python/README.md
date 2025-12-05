@@ -43,3 +43,27 @@ print(f"cp = {ca.cp(T, X):.2f} J/(mol·K)")
 print(f"density = {ca.density(T, P, X):.4f} kg/m³")
 print(f"viscosity = {ca.viscosity(T, P, X):.2e} Pa·s")
 ```
+
+### State-based Combustion API
+
+The package provides a `State` class for combustion and equilibrium calculations:
+
+```python
+import numpy as np
+import combaero as ca
+
+# Create a CH4 + air mixture
+X = np.zeros(ca.num_species(), dtype=float)
+X[ca.species_index_from_name("CH4")] = 0.095
+X[ca.species_index_from_name("O2")] = 0.19
+X[ca.species_index_from_name("N2")] = 0.715
+
+# Adiabatic complete combustion
+burned = ca.complete_combustion(T=300.0, X=X)
+print(f"Adiabatic flame T: {burned.T:.0f} K")
+print(f"Burned composition: CO2={burned.X[ca.species_index_from_name('CO2')]:.3f}")
+
+# WGS equilibrium (isothermal or adiabatic)
+eq = ca.wgs_equilibrium_adiabatic(T=1500.0, X=burned.X)
+print(f"Equilibrium T: {eq.T:.0f} K")
+```
