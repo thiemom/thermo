@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "../include/thermo.h"
+#include "../include/thermo_transport_data.h"
 #include "../include/transport.h"
 #include "../include/combustion.h"
 #include "../include/equilibrium.h"

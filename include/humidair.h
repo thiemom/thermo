@@ -11,14 +11,6 @@ extern const std::unordered_map<std::string, double> dry_air_composition;
 // Get standard dry air composition as a vector in the order defined by species_index in thermo_transport_data.h
 std::vector<double> standard_dry_air_composition();
 
-// Normalize a vector of fractions to sum to 1.0
-// Returns all zeros with a warning if input contains all zeros
-std::vector<double> normalize_fractions(const std::vector<double>& fractions);
-
-// Convert mole fractions to dry fractions (remove water vapor and normalize)
-// Returns all zeros with a warning if input contains only water vapor
-std::vector<double> convert_to_dry_fractions(const std::vector<double>& mole_fractions);
-
 // Water vapor saturation pressure using Hyland-Wexler equation [Pa]
 // Valid for 0°C ≤ T ≤ 200°C
 double saturation_vapor_pressure(double T);  // T in K

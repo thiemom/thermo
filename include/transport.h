@@ -1,8 +1,6 @@
 #ifndef TRANSPORT_H
 #define TRANSPORT_H
 
-#include "thermo.h"
-#include "thermo_transport_data.h"
 #include <vector>
 
 // Collision integral functions

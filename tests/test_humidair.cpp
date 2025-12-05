@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "../include/humidair.h"
 #include "../include/thermo.h"
+#include "../include/thermo_transport_data.h"
 #include <vector>
 #include <cmath>
 #include <iostream>

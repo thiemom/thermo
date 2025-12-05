@@ -1,6 +1,7 @@
 #include "../include/transport.h"
+#include "../include/thermo.h"
+#include "../include/thermo_transport_data.h"
 #include <cmath>
-#include <numeric>
 #include <stdexcept>
 
 using combaero::thermo::R_GAS;
