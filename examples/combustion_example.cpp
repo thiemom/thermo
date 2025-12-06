@@ -35,9 +35,9 @@ int main()
     fuel.state.X = std::vector<double>(n_species, 0.0);
     fuel.state.X[idx_CH4] = 1.0;
 
-    // Oxidizer stream: humid air at 25°C, 60% RH, 10 kg/s
+    // Oxidizer stream: humid air at 300 K, 60% RH, 10 kg/s
     Stream air;
-    air.state.T = 298.15;
+    air.state.T = 300.0;
     air.state.P = 101325.0;
     air.state.X = humid_air_composition(air.state.T, air.state.P, 0.60);
     air.mdot = 10.0;  // kg/s (fixed)

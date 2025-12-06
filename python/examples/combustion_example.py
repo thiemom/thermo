@@ -38,10 +38,10 @@ def main() -> None:
     # =========================================================================
     # Define air: Humid air at 60% RH
     # =========================================================================
-    X_air = np.array(ca.humid_air_composition(298.15, 101325.0, 0.6))
+    X_air = np.array(ca.humid_air_composition(300.0, 101325.0, 0.6))
 
     air = ca.Stream()
-    air.T = 298.15
+    air.T = 300.0
     air.P = 101325.0
     air.X = X_air
     air.mdot = 10.0  # kg/s
@@ -56,7 +56,7 @@ def main() -> None:
     print(f"      CH4: {X_fuel[sp.indices['CH4']]*100:.0f}%, "
           f"C2H6: {X_fuel[sp.indices['C2H6']]*100:.0f}%, "
           f"C3H8: {X_fuel[sp.indices['C3H8']]*100:.0f}%")
-    print(f"Air:  Humid air at {air.T:.1f} K, 60% RH, {air.mdot:.1f} kg/s")
+    print(f"Air:  Humid air at {air.T:.0f} K, 60% RH, {air.mdot:.1f} kg/s")
 
     print("\nEquivalence Ratio Sweep")
     print("-" * 75)

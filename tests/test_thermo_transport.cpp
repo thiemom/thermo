@@ -162,6 +162,29 @@ TEST_F(ThermoTransportTest, ConvertPureWaterVaporToDry) {
     EXPECT_TRUE(vectors_approx_equal(result, all_zeros));
 }
 
+// Test that temperature below valid range issues a warning but still returns a result
+TEST_F(ThermoTransportTest, TemperatureBelowValidRangeWarning) {
+    // Use 298.15 K which is below the 300 K minimum for most species
+    double T = 298.15;
+    
+    // Redirect cerr to capture warning
+    testing::internal::CaptureStderr();
+    
+    // Calculate cp - should still work but issue warning
+    double cp_value = cp(T, air_composition);
+    
+    // Check that warning was issued
+    std::string output = testing::internal::GetCapturedStderr();
+    EXPECT_TRUE(output.find("Warning") != std::string::npos) 
+        << "Expected temperature range warning for T=298.15 K";
+    EXPECT_TRUE(output.find("below valid range") != std::string::npos)
+        << "Warning should mention 'below valid range'";
+    
+    // Result should still be reasonable (extrapolated)
+    EXPECT_GT(cp_value, 20.0);
+    EXPECT_LT(cp_value, 50.0);
+}
+
 // Test basic thermodynamic properties
 TEST_F(ThermoTransportTest, BasicThermodynamicProperties) {
     // Test at standard conditions (300 K to avoid boundary warnings)
@@ -870,9 +893,9 @@ TEST_F(ThermoTransportTest, MixingNaturalGasWithHumidAir) {
     fuel.mdot = 1.0;  // 1 kg/s
     
     // Humid air
-    std::vector<double> X_air = humid_air_composition(298.15, 101325.0, 0.5);
+    std::vector<double> X_air = humid_air_composition(300.0, 101325.0, 0.5);
     State air_state;
-    air_state.T = 298.15;
+    air_state.T = 300.0;
     air_state.P = 101325.0;
     air_state.X = X_air;
     Stream air;
@@ -928,9 +951,9 @@ TEST_F(ThermoTransportTest, CompleteCombustionNaturalGas) {
     fuel.mdot = 1.0;
     
     // Humid air
-    std::vector<double> X_air = humid_air_composition(298.15, 101325.0, 0.5);
+    std::vector<double> X_air = humid_air_composition(300.0, 101325.0, 0.5);
     State air_state;
-    air_state.T = 298.15;
+    air_state.T = 300.0;
     air_state.P = 101325.0;
     air_state.X = X_air;
     Stream air;
@@ -983,9 +1006,9 @@ TEST_F(ThermoTransportTest, EquivalenceRatioNaturalGas) {
     fuel.mdot = 1.0;
     
     // Humid air
-    std::vector<double> X_air = humid_air_composition(298.15, 101325.0, 0.5);
+    std::vector<double> X_air = humid_air_composition(300.0, 101325.0, 0.5);
     State air_state;
-    air_state.T = 298.15;
+    air_state.T = 300.0;
     air_state.P = 101325.0;
     air_state.X = X_air;
     Stream air;
@@ -1037,9 +1060,9 @@ TEST_F(ThermoTransportTest, CompleteCombustionLPG) {
     fuel.mdot = 1.0;
     
     // Dry air
-    std::vector<double> X_air = humid_air_composition(298.15, 101325.0, 0.0);
+    std::vector<double> X_air = humid_air_composition(300.0, 101325.0, 0.0);
     State air_state;
-    air_state.T = 298.15;
+    air_state.T = 300.0;
     air_state.P = 101325.0;
     air_state.X = X_air;
     Stream air;
@@ -1094,9 +1117,9 @@ TEST_F(ThermoTransportTest, RichCombustionNaturalGasUnburnedHC) {
     fuel.mdot = 1.0;
     
     // Humid air
-    std::vector<double> X_air = humid_air_composition(298.15, 101325.0, 0.5);
+    std::vector<double> X_air = humid_air_composition(300.0, 101325.0, 0.5);
     State air_state;
-    air_state.T = 298.15;
+    air_state.T = 300.0;
     air_state.P = 101325.0;
     air_state.X = X_air;
     Stream air;
