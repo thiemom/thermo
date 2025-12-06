@@ -31,7 +31,10 @@ def main() -> None:
     X_fuel[sp.indices["CO2"]] = 0.01
 
     fuel = ca.Stream()
-    fuel.set_T(300.0).set_P(101325.0).set_X(X_fuel).set_mdot(1.0)
+    fuel.T = 300.0
+    fuel.P = 101325.0
+    fuel.X = X_fuel
+    fuel.mdot = 1.0
 
     # =========================================================================
     # Define air: Humid air at 60% RH
@@ -39,7 +42,10 @@ def main() -> None:
     X_air = np.array(ca.humid_air_composition(298.15, 101325.0, 0.6))
 
     air = ca.Stream()
-    air.set_T(298.15).set_P(101325.0).set_X(X_air).set_mdot(10.0)  # kg/s
+    air.T = 298.15
+    air.P = 101325.0
+    air.X = X_air
+    air.mdot = 10.0  # kg/s
 
     # =========================================================================
     # Equivalence ratio sweep
@@ -47,11 +53,11 @@ def main() -> None:
     print("=" * 75)
     print("Combustion Example: Natural Gas + Humid Air")
     print("=" * 75)
-    print(f"\nFuel: Natural gas at {fuel.T():.1f} K")
+    print(f"\nFuel: Natural gas at {fuel.T:.1f} K")
     print(f"      CH4: {X_fuel[sp.indices['CH4']]*100:.0f}%, "
           f"C2H6: {X_fuel[sp.indices['C2H6']]*100:.0f}%, "
           f"C3H8: {X_fuel[sp.indices['C3H8']]*100:.0f}%")
-    print(f"Air:  Humid air at {air.T():.1f} K, 60% RH, {air.mdot:.1f} kg/s")
+    print(f"Air:  Humid air at {air.T:.1f} K, 60% RH, {air.mdot:.1f} kg/s")
 
     print("\nEquivalence Ratio Sweep")
     print("-" * 75)
@@ -72,13 +78,13 @@ def main() -> None:
         Z_target = phi * stoich_ratio / (1 + (phi - 1) * stoich_ratio)
         mdot_fuel = Z_target * air.mdot / (1 - Z_target)
 
-        fuel.set_mdot(mdot_fuel)
+        fuel.mdot = mdot_fuel
 
         # Mix streams
         mixed = ca.mix([fuel, air])
 
         # Complete combustion
-        burned = ca.complete_combustion(mixed.T(), mixed.X(), mixed.P())
+        burned = ca.complete_combustion(mixed.T, mixed.X, mixed.P)
 
         # Reforming + WGS equilibrium
         eq = ca.reforming_equilibrium_adiabatic(burned.T, burned.X, burned.P)
@@ -87,7 +93,7 @@ def main() -> None:
         X_CO = eq.X[sp.indices["CO"]] * 100
         X_H2 = eq.X[sp.indices["H2"]] * 100
 
-        print(f"{phi:6.2f} {mdot_fuel:10.4f} {mixed.T():10.2f} {burned.T:10.2f} "
+        print(f"{phi:6.2f} {mdot_fuel:10.4f} {mixed.T:10.2f} {burned.T:10.2f} "
               f"{eq.T:10.2f} {X_CO:10.4f} {X_H2:10.4f}")
 
     # =========================================================================
@@ -99,15 +105,15 @@ def main() -> None:
 
     phi = 1.0
     Z_target = phi * stoich_ratio / (1 + (phi - 1) * stoich_ratio)
-    fuel.set_mdot(Z_target * air.mdot / (1 - Z_target))
+    fuel.mdot = Z_target * air.mdot / (1 - Z_target)
 
     mixed = ca.mix([fuel, air])
-    burned = ca.complete_combustion(mixed.T(), mixed.X(), mixed.P())
+    burned = ca.complete_combustion(mixed.T, mixed.X, mixed.P)
     eq = ca.reforming_equilibrium_adiabatic(burned.T, burned.X, burned.P)
 
     print(f"\nMixed Stream (before combustion):")
-    print(f"  T = {mixed.T():.2f} K")
-    print(f"  P = {mixed.P():.0f} Pa")
+    print(f"  T = {mixed.T:.2f} K")
+    print(f"  P = {mixed.P:.0f} Pa")
     print(f"  mdot = {mixed.mdot:.4f} kg/s")
 
     print(f"\nComplete Combustion (CO2 + H2O only):")
@@ -130,10 +136,10 @@ def main() -> None:
 
     phi = 1.2
     Z_target = phi * stoich_ratio / (1 + (phi - 1) * stoich_ratio)
-    fuel.set_mdot(Z_target * air.mdot / (1 - Z_target))
+    fuel.mdot = Z_target * air.mdot / (1 - Z_target)
 
     mixed = ca.mix([fuel, air])
-    burned = ca.complete_combustion(mixed.T(), mixed.X(), mixed.P())
+    burned = ca.complete_combustion(mixed.T, mixed.X, mixed.P)
     eq = ca.reforming_equilibrium_adiabatic(burned.T, burned.X, burned.P)
 
     print(f"\nComplete Combustion (before equilibrium):")

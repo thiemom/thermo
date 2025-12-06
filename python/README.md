@@ -46,27 +46,33 @@ print(f"viscosity = {ca.viscosity(T, P, X):.2e} Pa·s")
 
 ### State-based API
 
-The `State` class provides property getters and setters with chaining:
+The `State` class uses Pythonic properties for all attribute access:
 
 ```python
 import numpy as np
 import combaero as ca
 
-# Create a State with setters
+# Create a State - direct property assignment
+s = ca.State()
+s.T = 300.0
+s.P = 101325.0
+s.X = X_air
+
+# Or use fluent setters for chaining
 s = ca.State()
 s.set_T(300.0).set_P(101325.0).set_X(X_air)
 
-# Access thermodynamic properties
-print(f"cp = {s.cp():.2f} J/(mol·K)")
-print(f"h = {s.h():.0f} J/mol")
-print(f"rho = {s.rho():.4f} kg/m³")
-print(f"gamma = {s.gamma():.3f}")
-print(f"speed of sound = {s.a():.1f} m/s")
+# Access thermodynamic properties (all are properties, not methods)
+print(f"cp = {s.cp:.2f} J/(mol·K)")
+print(f"h = {s.h:.0f} J/mol")
+print(f"rho = {s.rho:.4f} kg/m³")
+print(f"gamma = {s.gamma:.3f}")
+print(f"speed of sound = {s.a:.1f} m/s")
 
 # Access transport properties
-print(f"viscosity = {s.mu():.2e} Pa·s")
-print(f"thermal conductivity = {s.k():.4f} W/(m·K)")
-print(f"Prandtl = {s.Pr():.3f}")
+print(f"viscosity = {s.mu:.2e} Pa·s")
+print(f"thermal conductivity = {s.k:.4f} W/(m·K)")
+print(f"Prandtl = {s.Pr:.3f}")
 ```
 
 ### Combustion and Equilibrium
@@ -84,7 +90,7 @@ X[ca.species_index_from_name("N2")] = 0.715
 # Adiabatic complete combustion
 burned = ca.complete_combustion(T=300.0, X=X)
 print(f"Adiabatic flame T: {burned.T:.0f} K")
-print(f"Flame density: {burned.rho():.4f} kg/m³")
+print(f"Flame density: {burned.rho:.4f} kg/m³")
 
 # WGS equilibrium (isothermal or adiabatic)
 eq = ca.wgs_equilibrium_adiabatic(T=1500.0, X=burned.X)
@@ -139,16 +145,25 @@ Mix multiple streams with mass and enthalpy balance:
 import numpy as np
 import combaero as ca
 
-# Create streams
+# Create streams - use property assignment (Pythonic)
 air = ca.Stream()
-air.set_T(400.0).set_P(101325.0).set_X(X_air).set_mdot(10.0)
+air.T = 400.0
+air.P = 101325.0
+air.X = X_air
+air.mdot = 10.0
 
 fuel = ca.Stream()
+fuel.T = 300.0
+fuel.P = 101325.0
+fuel.X = X_fuel
+fuel.mdot = 0.5
+
+# Or use fluent setters for one-liners
 fuel.set_T(300.0).set_P(101325.0).set_X(X_fuel).set_mdot(0.5)
 
 # Mix streams (uses minimum inlet pressure by default)
 mixed = ca.mix([air, fuel])
-print(f"Mixed T: {mixed.T():.1f} K")
+print(f"Mixed T: {mixed.T:.1f} K")
 print(f"Mixed mdot: {mixed.mdot:.2f} kg/s")
 
 # Or specify output pressure explicitly

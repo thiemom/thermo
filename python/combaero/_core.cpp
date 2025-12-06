@@ -591,60 +591,72 @@ PYBIND11_MODULE(_core, m)
         "P    : pressure [Pa] (default 101325)"
     );
 
-    // State struct binding
+    // State struct binding - Pythonic property-based API
     py::class_<State>(m, "State")
         .def(py::init<>())
+        // Mutable state variables (read/write properties)
         .def_readwrite("T", &State::T, "Temperature [K]")
         .def_readwrite("P", &State::P, "Pressure [Pa]")
         .def_readwrite("X", &State::X, "Mole fractions [-]")
-        // Property getters
-        .def("mw", &State::mw, "Molecular weight [g/mol]")
-        .def("cp", &State::cp, "Specific heat at constant pressure [J/(mol·K)]")
-        .def("h", &State::h, "Specific enthalpy [J/mol]")
-        .def("s", &State::s, "Specific entropy [J/(mol·K)]")
-        .def("cv", &State::cv, "Specific heat at constant volume [J/(mol·K)]")
-        .def("u", &State::u, "Specific internal energy [J/mol]")
-        .def("rho", &State::rho, "Density [kg/m³]")
-        .def("R", &State::R, "Specific gas constant [J/(mol·K)]")
-        .def("gamma", &State::gamma, "Isentropic expansion coefficient [-]")
-        .def("a", &State::a, "Speed of sound [m/s]")
-        // Transport properties
-        .def("mu", &State::mu, "Dynamic viscosity [Pa·s]")
-        .def("k", &State::k, "Thermal conductivity [W/(m·K)]")
-        .def("nu", &State::nu, "Kinematic viscosity [m²/s]")
-        .def("Pr", &State::Pr, "Prandtl number [-]")
-        .def("alpha", &State::alpha, "Thermal diffusivity [m²/s]")
-        // Setters
-        .def("set_T", &State::set_T, py::arg("T"), "Set temperature [K]")
-        .def("set_P", &State::set_P, py::arg("P"), "Set pressure [Pa]")
+        // Computed thermodynamic properties (read-only)
+        .def_property_readonly("mw", &State::mw, "Molecular weight [g/mol]")
+        .def_property_readonly("cp", &State::cp, "Specific heat at constant pressure [J/(mol·K)]")
+        .def_property_readonly("h", &State::h, "Specific enthalpy [J/mol]")
+        .def_property_readonly("s", &State::s, "Specific entropy [J/(mol·K)]")
+        .def_property_readonly("cv", &State::cv, "Specific heat at constant volume [J/(mol·K)]")
+        .def_property_readonly("u", &State::u, "Specific internal energy [J/mol]")
+        .def_property_readonly("rho", &State::rho, "Density [kg/m³]")
+        .def_property_readonly("R", &State::R, "Specific gas constant [J/(mol·K)]")
+        .def_property_readonly("gamma", &State::gamma, "Isentropic expansion coefficient [-]")
+        .def_property_readonly("a", &State::a, "Speed of sound [m/s]")
+        // Transport properties (read-only)
+        .def_property_readonly("mu", &State::mu, "Dynamic viscosity [Pa·s]")
+        .def_property_readonly("k", &State::k, "Thermal conductivity [W/(m·K)]")
+        .def_property_readonly("nu", &State::nu, "Kinematic viscosity [m²/s]")
+        .def_property_readonly("Pr", &State::Pr, "Prandtl number [-]")
+        .def_property_readonly("alpha", &State::alpha, "Thermal diffusivity [m²/s]")
+        // Fluent setters (return self for chaining)
+        .def("set_T", &State::set_T, py::arg("T"), "Set temperature [K], returns self")
+        .def("set_P", &State::set_P, py::arg("P"), "Set pressure [Pa], returns self")
         .def("set_X", [](State& s, py::array_t<double, py::array::c_style | py::array::forcecast> X_arr) -> State& {
             s.X = to_vec(X_arr);
             return s;
-        }, py::arg("X"), "Set mole fractions [-]");
+        }, py::arg("X"), "Set mole fractions [-], returns self");
 
-    // Stream struct binding
+    // Stream struct binding - Pythonic property-based API
     py::class_<Stream>(m, "Stream")
         .def(py::init<>())
         .def_readwrite("state", &Stream::state, "Thermodynamic state")
+        // Mutable state (read/write properties)
+        .def_property("T",
+            [](const Stream& s) { return s.T(); },
+            [](Stream& s, double T) { s.set_T(T); },
+            "Temperature [K]")
+        .def_property("P",
+            [](const Stream& s) { return s.P(); },
+            [](Stream& s, double P) { s.set_P(P); },
+            "Pressure [Pa]")
+        .def_property("X",
+            [](const Stream& s) { return s.X(); },
+            [](Stream& s, py::array_t<double, py::array::c_style | py::array::forcecast> X_arr) {
+                s.state.X = to_vec(X_arr);
+            },
+            "Mole fractions [-]")
         .def_readwrite("mdot", &Stream::mdot, "Mass flow rate [kg/s]")
-        // Convenience accessors
-        .def("T", &Stream::T, "Temperature [K]")
-        .def("P", &Stream::P, "Pressure [Pa]")
-        .def("X", &Stream::X, "Mole fractions [-]")
-        // Property getters
-        .def("mw", &Stream::mw, "Molecular weight [g/mol]")
-        .def("cp", &Stream::cp, "Specific heat at constant pressure [J/(mol·K)]")
-        .def("h", &Stream::h, "Specific enthalpy [J/mol]")
-        .def("s", &Stream::s, "Specific entropy [J/(mol·K)]")
-        .def("rho", &Stream::rho, "Density [kg/m³]")
-        // Setters
-        .def("set_T", &Stream::set_T, py::arg("T"), "Set temperature [K]")
-        .def("set_P", &Stream::set_P, py::arg("P"), "Set pressure [Pa]")
+        // Computed properties (read-only)
+        .def_property_readonly("mw", &Stream::mw, "Molecular weight [g/mol]")
+        .def_property_readonly("cp", &Stream::cp, "Specific heat at constant pressure [J/(mol·K)]")
+        .def_property_readonly("h", &Stream::h, "Specific enthalpy [J/mol]")
+        .def_property_readonly("s", &Stream::s, "Specific entropy [J/(mol·K)]")
+        .def_property_readonly("rho", &Stream::rho, "Density [kg/m³]")
+        // Fluent setters (return self for chaining)
+        .def("set_T", &Stream::set_T, py::arg("T"), "Set temperature [K], returns self")
+        .def("set_P", &Stream::set_P, py::arg("P"), "Set pressure [Pa], returns self")
         .def("set_X", [](Stream& s, py::array_t<double, py::array::c_style | py::array::forcecast> X_arr) -> Stream& {
             s.state.X = to_vec(X_arr);
             return s;
-        }, py::arg("X"), "Set mole fractions [-]")
-        .def("set_mdot", &Stream::set_mdot, py::arg("mdot"), "Set mass flow rate [kg/s]");
+        }, py::arg("X"), "Set mole fractions [-], returns self")
+        .def("set_mdot", &Stream::set_mdot, py::arg("mdot"), "Set mass flow rate [kg/s], returns self");
 
     // Stream mixing function
     m.def(
