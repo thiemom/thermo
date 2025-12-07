@@ -26,6 +26,7 @@ set(SOURCES
     src/thermo.cpp
     src/transport.cpp
     src/combustion.cpp
+    src/compressible.cpp
     src/humidair.cpp
     src/equilibrium.cpp
     src/state.cpp

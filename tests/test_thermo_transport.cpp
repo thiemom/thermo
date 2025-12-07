@@ -5,6 +5,7 @@
 #include "../include/combustion.h"
 #include "../include/equilibrium.h"
 #include "../include/humidair.h"
+#include "../include/compressible.h"
 #include "../include/state.h"
 #include <vector>
 #include <cmath>
@@ -23,42 +24,24 @@ protected:
         water_vapor.resize(n_species, 0.0);
         all_zeros.resize(n_species, 0.0);
         
-        // Set up a simple air-like composition using species that should exist
-        // N2: ~78%, O2: ~21%, trace others
-        try {
-            air_composition[species_index_from_name("N2")] = 0.78;
-            air_composition[species_index_from_name("O2")] = 0.21;
-            if (species_index.count("AR") || species_index.count("Ar")) {
-                const std::size_t ar_idx = species_index.count("AR") ? species_index_from_name("AR") : species_index_from_name("Ar");
-                air_composition[ar_idx] = 0.01;
-            }
-        } catch (...) {
-            // If species don't exist, just use zeros
-        }
+        // Set up air composition: N2 ~78%, O2 ~21%, Ar ~1%
+        // Species are guaranteed to exist in our fixed species list
+        air_composition[species_index_from_name("N2")] = 0.78;
+        air_composition[species_index_from_name("O2")] = 0.21;
+        air_composition[species_index_from_name("AR")] = 0.01;
         
         // Non-normalized: arbitrary non-zero values
-        if (n_species > 0) non_normalized[0] = 0.1;
-        if (n_species > 1) non_normalized[1] = 0.4;
-        if (n_species > 2) non_normalized[2] = 0.05;
+        non_normalized[species_index_from_name("N2")] = 0.1;
+        non_normalized[species_index_from_name("O2")] = 0.4;
+        non_normalized[species_index_from_name("H2")] = 0.05;
         
-        // Humid air: similar to air but with water
+        // Humid air: air with 4% water vapor
         humid_air = air_composition;
-        try {
-            const std::size_t h2o_idx = species_index_from_name("H2O");
-            // Reduce others by 4% and add 4% water
-            for (auto& val : humid_air) val *= 0.96;
-            humid_air[h2o_idx] = 0.04;
-        } catch (...) {
-            // If H2O doesn't exist, just use air composition
-        }
+        for (auto& val : humid_air) val *= 0.96;
+        humid_air[species_index_from_name("H2O")] = 0.04;
         
         // Pure water vapor
-        try {
-            std::size_t h2o_idx = species_index_from_name("H2O");
-            water_vapor[h2o_idx] = 1.0;
-        } catch (...) {
-            // If H2O doesn't exist, leave as zeros
-        }
+        water_vapor[species_index_from_name("H2O")] = 1.0;
     }
     
     std::vector<double> air_composition;
@@ -133,16 +116,9 @@ TEST_F(ThermoTransportTest, NormalizeAllZeros) {
 TEST_F(ThermoTransportTest, ConvertToDryFractions) {
     auto result = convert_to_dry_fractions(humid_air);
     
-    // Check that water vapor is zero (if H2O exists)
-    try {
-        std::size_t h2o_idx = species_index_from_name("H2O");
-        EXPECT_DOUBLE_EQ(result[h2o_idx], 0.0);
-    } catch (...) {
-        // H2O doesn't exist in species list, skip this check
-    }
-    
-    // Check that sum is 1.0
-    EXPECT_TRUE(sum_approx_equal(result, 1.0));
+    // Check that water vapor is zero
+    std::size_t h2o_idx = species_index_from_name("H2O");
+    EXPECT_DOUBLE_EQ(result[h2o_idx], 0.0);
     
     // Check that sum is 1.0
     EXPECT_TRUE(sum_approx_equal(result, 1.0));
@@ -2453,4 +2429,200 @@ TEST_F(ThermoTransportTest, InverseSolversRejectZeroMdot) {
     EXPECT_THROW(set_oxidizer_stream_for_Tad(1500.0, fuel, air), std::invalid_argument);
     EXPECT_THROW(set_oxidizer_stream_for_O2(0.10, fuel, air), std::invalid_argument);
     EXPECT_THROW(set_oxidizer_stream_for_CO2(0.05, fuel, air), std::invalid_argument);
+}
+
+// =============================================================================
+// Compressible Flow Tests (ideal gas with variable cp)
+// =============================================================================
+// Strategy: Use round-trip tests (forward -> inverse -> verify) to ensure
+// consistency. Use high T0 to keep outlet T within valid thermo data range
+// (above 300K for most species).
+
+// Test nozzle flow subsonic: basic sanity checks
+TEST_F(ThermoTransportTest, NozzleFlowSubsonicBasic) {
+    const std::size_t n = species_names.size();
+    const std::size_t idx_N2 = species_index_from_name("N2");
+    const std::size_t idx_O2 = species_index_from_name("O2");
+    
+    std::vector<double> X_air(n, 0.0);
+    X_air[idx_O2] = 0.21;
+    X_air[idx_N2] = 0.79;
+    
+    // Use high T0 so outlet stays above 300K even with expansion
+    double T0 = 500.0;      // K
+    double P0 = 150000.0;   // Pa (1.5 bar)
+    double P_back = 120000.0; // Pa - mild expansion, subsonic
+    double A_eff = 0.001;   // m²
+    
+    auto sol = nozzle_flow(T0, P0, P_back, A_eff, X_air);
+    
+    // Basic sanity checks
+    EXPECT_FALSE(sol.choked);
+    EXPECT_GT(sol.M, 0.0);
+    EXPECT_LT(sol.M, 1.0);
+    EXPECT_NEAR(sol.outlet.P, P_back, 1.0);
+    EXPECT_LT(sol.outlet.T, T0);
+    EXPECT_GT(sol.outlet.T, 300.0);  // Should stay in valid range
+    EXPECT_GT(sol.mdot, 0.0);
+    EXPECT_GT(sol.v, 0.0);
+}
+
+// Round-trip test: nozzle_flow -> solve_A_eff_from_mdot
+TEST_F(ThermoTransportTest, CompressibleRoundTripAeff) {
+    const std::size_t n = species_names.size();
+    const std::size_t idx_N2 = species_index_from_name("N2");
+    const std::size_t idx_O2 = species_index_from_name("O2");
+    
+    std::vector<double> X_air(n, 0.0);
+    X_air[idx_O2] = 0.21;
+    X_air[idx_N2] = 0.79;
+    
+    double T0 = 600.0;       // K - high enough for mild expansion
+    double P0 = 200000.0;    // Pa
+    double P_back = 180000.0; // Pa - subsonic, mild expansion
+    double A_eff_orig = 0.0005;
+    
+    // Forward: compute mass flow
+    auto sol = nozzle_flow(T0, P0, P_back, A_eff_orig, X_air);
+    EXPECT_GT(sol.mdot, 0.0);
+    EXPECT_GT(sol.outlet.T, 300.0);  // Verify in valid range
+    
+    // Inverse: recover A_eff from mdot
+    double A_eff_calc = solve_A_eff_from_mdot(T0, P0, P_back, sol.mdot, X_air);
+    
+    // Round-trip should match within 1%
+    EXPECT_NEAR(A_eff_calc, A_eff_orig, A_eff_orig * 0.01);
+}
+
+// Round-trip test: nozzle_flow -> solve_P_back_from_mdot
+TEST_F(ThermoTransportTest, CompressibleRoundTripPback) {
+    const std::size_t n = species_names.size();
+    const std::size_t idx_N2 = species_index_from_name("N2");
+    const std::size_t idx_O2 = species_index_from_name("O2");
+    
+    std::vector<double> X_air(n, 0.0);
+    X_air[idx_O2] = 0.21;
+    X_air[idx_N2] = 0.79;
+    
+    double T0 = 600.0;
+    double P0 = 200000.0;
+    double P_back_orig = 170000.0;  // Subsonic
+    double A_eff = 0.001;
+    
+    // Forward
+    auto sol = nozzle_flow(T0, P0, P_back_orig, A_eff, X_air);
+    EXPECT_FALSE(sol.choked);
+    EXPECT_GT(sol.outlet.T, 300.0);
+    
+    // Inverse
+    double P_back_calc = solve_P_back_from_mdot(T0, P0, A_eff, sol.mdot, X_air);
+    
+    EXPECT_NEAR(P_back_calc, P_back_orig, P_back_orig * 0.01);
+}
+
+// Round-trip test: nozzle_flow -> solve_P0_from_mdot
+TEST_F(ThermoTransportTest, CompressibleRoundTripP0) {
+    const std::size_t n = species_names.size();
+    const std::size_t idx_N2 = species_index_from_name("N2");
+    const std::size_t idx_O2 = species_index_from_name("O2");
+    
+    std::vector<double> X_air(n, 0.0);
+    X_air[idx_O2] = 0.21;
+    X_air[idx_N2] = 0.79;
+    
+    double T0 = 600.0;
+    double P0_orig = 180000.0;
+    double P_back = 150000.0;
+    double A_eff = 0.001;
+    
+    // Forward
+    auto sol = nozzle_flow(T0, P0_orig, P_back, A_eff, X_air);
+    EXPECT_GT(sol.outlet.T, 300.0);
+    
+    // Inverse
+    double P0_calc = solve_P0_from_mdot(T0, P_back, A_eff, sol.mdot, X_air);
+    
+    EXPECT_NEAR(P0_calc, P0_orig, P0_orig * 0.01);
+}
+
+// Round-trip with hot combustion products
+TEST_F(ThermoTransportTest, CompressibleRoundTripHotGas) {
+    const std::size_t n = species_names.size();
+    const std::size_t idx_N2 = species_index_from_name("N2");
+    const std::size_t idx_O2 = species_index_from_name("O2");
+    const std::size_t idx_CO2 = species_index_from_name("CO2");
+    const std::size_t idx_H2O = species_index_from_name("H2O");
+    
+    // Approximate lean combustion products
+    std::vector<double> X_products(n, 0.0);
+    X_products[idx_N2] = 0.72;
+    X_products[idx_O2] = 0.05;
+    X_products[idx_CO2] = 0.10;
+    X_products[idx_H2O] = 0.13;
+    
+    double T0 = 1200.0;      // K (hot gas, but not extreme)
+    double P0 = 300000.0;    // Pa (3 bar)
+    double P_back = 250000.0; // Pa - mild expansion
+    double A_eff_orig = 0.0002;
+    
+    // Forward
+    auto sol = nozzle_flow(T0, P0, P_back, A_eff_orig, X_products);
+    EXPECT_GT(sol.mdot, 0.0);
+    EXPECT_GT(sol.outlet.T, 300.0);
+    EXPECT_GT(sol.v, 0.0);
+    
+    // Inverse: recover A_eff
+    double A_eff_calc = solve_A_eff_from_mdot(T0, P0, P_back, sol.mdot, X_products);
+    EXPECT_NEAR(A_eff_calc, A_eff_orig, A_eff_orig * 0.01);
+    
+    // Inverse: recover P_back
+    double P_back_calc = solve_P_back_from_mdot(T0, P0, A_eff_orig, sol.mdot, X_products);
+    EXPECT_NEAR(P_back_calc, P_back, P_back * 0.01);
+}
+
+// Test that mass flow increases with pressure ratio (until choking)
+TEST_F(ThermoTransportTest, CompressibleMassFlowMonotonic) {
+    const std::size_t n = species_names.size();
+    const std::size_t idx_N2 = species_index_from_name("N2");
+    const std::size_t idx_O2 = species_index_from_name("O2");
+    
+    std::vector<double> X_air(n, 0.0);
+    X_air[idx_O2] = 0.21;
+    X_air[idx_N2] = 0.79;
+    
+    double T0 = 800.0;
+    double P0 = 200000.0;
+    double A_eff = 0.001;
+    
+    // Mass flow should increase as P_back decreases (more expansion)
+    double mdot_prev = 0.0;
+    for (double P_back = 190000.0; P_back >= 160000.0; P_back -= 10000.0) {
+        auto sol = nozzle_flow(T0, P0, P_back, A_eff, X_air);
+        EXPECT_GT(sol.mdot, mdot_prev);
+        EXPECT_GT(sol.outlet.T, 300.0);
+        mdot_prev = sol.mdot;
+    }
+}
+
+// Test invalid inputs throw exceptions
+TEST_F(ThermoTransportTest, CompressibleInvalidInputs) {
+    const std::size_t n = species_names.size();
+    std::vector<double> X_air(n, 0.0);
+    X_air[species_index_from_name("O2")] = 0.21;
+    X_air[species_index_from_name("N2")] = 0.79;
+    
+    // Invalid T0
+    EXPECT_THROW(nozzle_flow(0.0, 200000.0, 100000.0, 0.001, X_air), std::invalid_argument);
+    EXPECT_THROW(nozzle_flow(-100.0, 200000.0, 100000.0, 0.001, X_air), std::invalid_argument);
+    
+    // Invalid P0
+    EXPECT_THROW(nozzle_flow(500.0, 0.0, 100000.0, 0.001, X_air), std::invalid_argument);
+    EXPECT_THROW(nozzle_flow(500.0, -100000.0, 100000.0, 0.001, X_air), std::invalid_argument);
+    
+    // Invalid P_back
+    EXPECT_THROW(nozzle_flow(500.0, 200000.0, 0.0, 0.001, X_air), std::invalid_argument);
+    
+    // Invalid A_eff
+    EXPECT_THROW(nozzle_flow(500.0, 200000.0, 100000.0, 0.0, X_air), std::invalid_argument);
+    EXPECT_THROW(nozzle_flow(500.0, 200000.0, 100000.0, -0.001, X_air), std::invalid_argument);
 }
