@@ -8,7 +8,9 @@
 #include "combustion.h"
 #include "equilibrium.h"
 #include "humidair.h"
-#include "species_common_names.h"
+#include "common_names.h"
+#include "compressible.h"
+#include "friction.h"
 #include "state.h"
 
 namespace py = pybind11;
@@ -60,11 +62,33 @@ PYBIND11_MODULE(_core, m)
 
     // Common names for species symbols
     m.def(
-        "species_common_names",
+        "formula_to_name",
         []() {
-            return combaero::species_common_names;
+            return combaero::formula_to_name;
         },
         "Mapping from canonical species symbols (e.g. 'CH4') to human-readable common names (e.g. 'Methane')."
+    );
+
+    m.def(
+        "name_to_formula",
+        []() {
+            return combaero::name_to_formula;
+        },
+        "Mapping from human-readable common names (e.g. 'Methane') to canonical species symbols (e.g. 'CH4')."
+    );
+
+    m.def(
+        "common_name",
+        &combaero::common_name,
+        py::arg("formula"),
+        "Get common name from formula (e.g., 'CH4' -> 'Methane')."
+    );
+
+    m.def(
+        "formula",
+        &combaero::formula,
+        py::arg("name"),
+        "Get formula from common name (e.g., 'Methane' -> 'CH4')."  
     );
 
     m.def(
@@ -248,6 +272,59 @@ PYBIND11_MODULE(_core, m)
         py::arg("P"),
         py::arg("X"),
         "Prandtl number Pr(T, P, X) [-]."
+    );
+
+    m.def(
+        "thermal_diffusivity",
+        [](double T,
+           double P,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr)
+        {
+            auto X = to_vec(X_arr);
+            return thermal_diffusivity(T, P, X);
+        },
+        py::arg("T"),
+        py::arg("P"),
+        py::arg("X"),
+        "Thermal diffusivity alpha(T, P, X) [m^2/s]."
+    );
+
+    m.def(
+        "reynolds",
+        [](double T,
+           double P,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double V,
+           double L)
+        {
+            auto X = to_vec(X_arr);
+            return reynolds(T, P, X, V, L);
+        },
+        py::arg("T"),
+        py::arg("P"),
+        py::arg("X"),
+        py::arg("V"),
+        py::arg("L"),
+        "Reynolds number Re = rho*V*L/mu [-]."
+    );
+
+    m.def(
+        "peclet",
+        [](double T,
+           double P,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double V,
+           double L)
+        {
+            auto X = to_vec(X_arr);
+            return peclet(T, P, X, V, L);
+        },
+        py::arg("T"),
+        py::arg("P"),
+        py::arg("X"),
+        py::arg("V"),
+        py::arg("L"),
+        "Peclet number Pe = V*L/alpha (thermal) [-]."
     );
 
     // Humid air utilities
@@ -1017,5 +1094,326 @@ PYBIND11_MODULE(_core, m)
         "  1. Complete combustion (fuel + O2 -> CO2 + H2O)\n"
         "  2. Reforming + WGS equilibrium on products\n\n"
         "Returns State with equilibrium temperature and composition."
+    );
+
+    // -------------------------------------------------------------
+    // Compressible flow
+    // -------------------------------------------------------------
+
+    // CompressibleFlowSolution struct
+    py::class_<CompressibleFlowSolution>(m, "CompressibleFlowSolution")
+        .def(py::init<>())
+        .def_readwrite("stagnation", &CompressibleFlowSolution::stagnation, "Stagnation state")
+        .def_readwrite("outlet", &CompressibleFlowSolution::outlet, "Outlet static state")
+        .def_readwrite("v", &CompressibleFlowSolution::v, "Outlet velocity [m/s]")
+        .def_readwrite("M", &CompressibleFlowSolution::M, "Outlet Mach number [-]")
+        .def_readwrite("mdot", &CompressibleFlowSolution::mdot, "Mass flow rate [kg/s]")
+        .def_readwrite("choked", &CompressibleFlowSolution::choked, "True if flow is choked");
+
+    // NozzleStation struct
+    py::class_<NozzleStation>(m, "NozzleStation")
+        .def(py::init<>())
+        .def_readwrite("x", &NozzleStation::x, "Axial position [m]")
+        .def_readwrite("A", &NozzleStation::A, "Area [m²]")
+        .def_readwrite("P", &NozzleStation::P, "Static pressure [Pa]")
+        .def_readwrite("T", &NozzleStation::T, "Static temperature [K]")
+        .def_readwrite("rho", &NozzleStation::rho, "Density [kg/m³]")
+        .def_readwrite("u", &NozzleStation::u, "Velocity [m/s]")
+        .def_readwrite("M", &NozzleStation::M, "Mach number [-]")
+        .def_readwrite("h", &NozzleStation::h, "Specific enthalpy [J/kg]");
+
+    // NozzleSolution struct
+    py::class_<NozzleSolution>(m, "NozzleSolution")
+        .def(py::init<>())
+        .def_readwrite("inlet", &NozzleSolution::inlet, "Inlet state")
+        .def_readwrite("outlet", &NozzleSolution::outlet, "Outlet state")
+        .def_readwrite("mdot", &NozzleSolution::mdot, "Mass flow rate [kg/s]")
+        .def_readwrite("h0", &NozzleSolution::h0, "Stagnation enthalpy [J/kg]")
+        .def_readwrite("T0", &NozzleSolution::T0, "Stagnation temperature [K]")
+        .def_readwrite("P0", &NozzleSolution::P0, "Stagnation pressure [Pa]")
+        .def_readwrite("choked", &NozzleSolution::choked, "True if throat is sonic")
+        .def_readwrite("x_throat", &NozzleSolution::x_throat, "Throat position [m]")
+        .def_readwrite("A_throat", &NozzleSolution::A_throat, "Throat area [m²]")
+        .def_readwrite("profile", &NozzleSolution::profile, "Axial profile");
+
+    // FannoStation struct
+    py::class_<FannoStation>(m, "FannoStation")
+        .def(py::init<>())
+        .def_readwrite("x", &FannoStation::x, "Position [m]")
+        .def_readwrite("P", &FannoStation::P, "Static pressure [Pa]")
+        .def_readwrite("T", &FannoStation::T, "Static temperature [K]")
+        .def_readwrite("rho", &FannoStation::rho, "Density [kg/m³]")
+        .def_readwrite("u", &FannoStation::u, "Velocity [m/s]")
+        .def_readwrite("M", &FannoStation::M, "Mach number [-]")
+        .def_readwrite("h", &FannoStation::h, "Specific enthalpy [J/kg]")
+        .def_readwrite("s", &FannoStation::s, "Specific entropy [J/(kg·K)]");
+
+    // FannoSolution struct
+    py::class_<FannoSolution>(m, "FannoSolution")
+        .def(py::init<>())
+        .def_readwrite("inlet", &FannoSolution::inlet, "Inlet state")
+        .def_readwrite("outlet", &FannoSolution::outlet, "Outlet state")
+        .def_readwrite("mdot", &FannoSolution::mdot, "Mass flow rate [kg/s]")
+        .def_readwrite("h0", &FannoSolution::h0, "Stagnation enthalpy [J/kg]")
+        .def_readwrite("L", &FannoSolution::L, "Pipe length [m]")
+        .def_readwrite("D", &FannoSolution::D, "Pipe diameter [m]")
+        .def_readwrite("f", &FannoSolution::f, "Darcy friction factor [-]")
+        .def_readwrite("choked", &FannoSolution::choked, "True if flow reached M=1")
+        .def_readwrite("L_choke", &FannoSolution::L_choke, "Length to choking [m]")
+        .def_readwrite("profile", &FannoSolution::profile, "Axial profile");
+
+    // Isentropic nozzle flow
+    m.def(
+        "nozzle_flow",
+        [](double T0, double P0, double P_back, double A_eff,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double tol, std::size_t max_iter)
+        {
+            auto X = to_vec(X_arr);
+            return nozzle_flow(T0, P0, P_back, A_eff, X, tol, max_iter);
+        },
+        py::arg("T0"),
+        py::arg("P0"),
+        py::arg("P_back"),
+        py::arg("A_eff"),
+        py::arg("X"),
+        py::arg("tol") = 1e-8,
+        py::arg("max_iter") = 50,
+        "Isentropic nozzle flow.\n\n"
+        "T0     : stagnation temperature [K]\n"
+        "P0     : stagnation pressure [Pa]\n"
+        "P_back : back pressure [Pa]\n"
+        "A_eff  : effective flow area [m²]\n"
+        "X      : mole fractions\n\n"
+        "Returns CompressibleFlowSolution."
+    );
+
+    // Inverse solvers
+    m.def(
+        "solve_A_eff_from_mdot",
+        [](double T0, double P0, double P_back, double mdot_target,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double tol, std::size_t max_iter)
+        {
+            auto X = to_vec(X_arr);
+            return solve_A_eff_from_mdot(T0, P0, P_back, mdot_target, X, tol, max_iter);
+        },
+        py::arg("T0"),
+        py::arg("P0"),
+        py::arg("P_back"),
+        py::arg("mdot_target"),
+        py::arg("X"),
+        py::arg("tol") = 1e-8,
+        py::arg("max_iter") = 50,
+        "Find effective area for given mass flow rate."
+    );
+
+    m.def(
+        "solve_P_back_from_mdot",
+        [](double T0, double P0, double A_eff, double mdot_target,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double tol, std::size_t max_iter)
+        {
+            auto X = to_vec(X_arr);
+            return solve_P_back_from_mdot(T0, P0, A_eff, mdot_target, X, tol, max_iter);
+        },
+        py::arg("T0"),
+        py::arg("P0"),
+        py::arg("A_eff"),
+        py::arg("mdot_target"),
+        py::arg("X"),
+        py::arg("tol") = 1e-8,
+        py::arg("max_iter") = 50,
+        "Find back pressure for given mass flow rate."
+    );
+
+    m.def(
+        "solve_P0_from_mdot",
+        [](double T0, double P_back, double A_eff, double mdot_target,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double tol, std::size_t max_iter)
+        {
+            auto X = to_vec(X_arr);
+            return solve_P0_from_mdot(T0, P_back, A_eff, mdot_target, X, tol, max_iter);
+        },
+        py::arg("T0"),
+        py::arg("P_back"),
+        py::arg("A_eff"),
+        py::arg("mdot_target"),
+        py::arg("X"),
+        py::arg("tol") = 1e-8,
+        py::arg("max_iter") = 50,
+        "Find stagnation pressure for given mass flow rate."
+    );
+
+    // Utility functions
+    m.def(
+        "critical_pressure_ratio",
+        [](double T0, double P0,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double tol, std::size_t max_iter)
+        {
+            auto X = to_vec(X_arr);
+            return critical_pressure_ratio(T0, P0, X, tol, max_iter);
+        },
+        py::arg("T0"),
+        py::arg("P0"),
+        py::arg("X"),
+        py::arg("tol") = 1e-8,
+        py::arg("max_iter") = 50,
+        "Critical (sonic) pressure ratio P*/P0."
+    );
+
+    m.def(
+        "mach_from_pressure_ratio",
+        [](double T0, double P0, double P,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double tol, std::size_t max_iter)
+        {
+            auto X = to_vec(X_arr);
+            return mach_from_pressure_ratio(T0, P0, P, X, tol, max_iter);
+        },
+        py::arg("T0"),
+        py::arg("P0"),
+        py::arg("P"),
+        py::arg("X"),
+        py::arg("tol") = 1e-8,
+        py::arg("max_iter") = 50,
+        "Mach number from pressure ratio P/P0 (isentropic)."
+    );
+
+    m.def(
+        "mass_flux_isentropic",
+        [](double T0, double P0, double P,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double tol, std::size_t max_iter)
+        {
+            auto X = to_vec(X_arr);
+            return mass_flux_isentropic(T0, P0, P, X, tol, max_iter);
+        },
+        py::arg("T0"),
+        py::arg("P0"),
+        py::arg("P"),
+        py::arg("X"),
+        py::arg("tol") = 1e-8,
+        py::arg("max_iter") = 50,
+        "Mass flux G = rho*v [kg/(m²·s)] at given pressure (isentropic)."
+    );
+
+    // Quasi-1D nozzle with C-D geometry
+    m.def(
+        "nozzle_cd",
+        [](double T0, double P0, double P_exit,
+           double A_inlet, double A_throat, double A_exit,
+           double x_throat, double x_exit,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           std::size_t n_stations, double tol, std::size_t max_iter)
+        {
+            auto X = to_vec(X_arr);
+            return nozzle_cd(T0, P0, P_exit, A_inlet, A_throat, A_exit,
+                             x_throat, x_exit, X, n_stations, tol, max_iter);
+        },
+        py::arg("T0"),
+        py::arg("P0"),
+        py::arg("P_exit"),
+        py::arg("A_inlet"),
+        py::arg("A_throat"),
+        py::arg("A_exit"),
+        py::arg("x_throat"),
+        py::arg("x_exit"),
+        py::arg("X"),
+        py::arg("n_stations") = 100,
+        py::arg("tol") = 1e-8,
+        py::arg("max_iter") = 50,
+        "Converging-diverging nozzle flow.\n\n"
+        "Uses smooth cosine area profile between inlet, throat, and exit.\n\n"
+        "Returns NozzleSolution with axial profile."
+    );
+
+    // Fanno flow
+    m.def(
+        "fanno_pipe",
+        [](double T_in, double P_in, double u_in,
+           double L, double D, double f,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           std::size_t n_steps, bool store_profile)
+        {
+            auto X = to_vec(X_arr);
+            return fanno_pipe(T_in, P_in, u_in, L, D, f, X, n_steps, store_profile);
+        },
+        py::arg("T_in"),
+        py::arg("P_in"),
+        py::arg("u_in"),
+        py::arg("L"),
+        py::arg("D"),
+        py::arg("f"),
+        py::arg("X"),
+        py::arg("n_steps") = 100,
+        py::arg("store_profile") = false,
+        "Fanno flow (adiabatic pipe with friction).\n\n"
+        "T_in : inlet temperature [K]\n"
+        "P_in : inlet pressure [Pa]\n"
+        "u_in : inlet velocity [m/s]\n"
+        "L    : pipe length [m]\n"
+        "D    : pipe diameter [m]\n"
+        "f    : Darcy friction factor [-]\n\n"
+        "Returns FannoSolution."
+    );
+
+    m.def(
+        "fanno_max_length",
+        [](double T_in, double P_in, double u_in,
+           double D, double f,
+           py::array_t<double, py::array::c_style | py::array::forcecast> X_arr,
+           double tol, std::size_t max_iter)
+        {
+            auto X = to_vec(X_arr);
+            return fanno_max_length(T_in, P_in, u_in, D, f, X, tol, max_iter);
+        },
+        py::arg("T_in"),
+        py::arg("P_in"),
+        py::arg("u_in"),
+        py::arg("D"),
+        py::arg("f"),
+        py::arg("X"),
+        py::arg("tol") = 1e-6,
+        py::arg("max_iter") = 100,
+        "Maximum pipe length before choking (L*)."
+    );
+
+    // -------------------------------------------------------------
+    // Friction factor correlations
+    // -------------------------------------------------------------
+
+    m.def(
+        "friction_haaland",
+        &friction_haaland,
+        py::arg("Re"),
+        py::arg("e_D"),
+        "Haaland friction factor correlation (explicit, ~2-3% accuracy).\n\n"
+        "Re  : Reynolds number [-]\n"
+        "e_D : relative roughness ε/D [-]"
+    );
+
+    m.def(
+        "friction_serghides",
+        &friction_serghides,
+        py::arg("Re"),
+        py::arg("e_D"),
+        "Serghides friction factor correlation (explicit, <0.3% accuracy).\n\n"
+        "Re  : Reynolds number [-]\n"
+        "e_D : relative roughness ε/D [-]"
+    );
+
+    m.def(
+        "friction_colebrook",
+        &friction_colebrook,
+        py::arg("Re"),
+        py::arg("e_D"),
+        py::arg("tol") = 1e-10,
+        py::arg("max_iter") = 20,
+        "Colebrook-White friction factor (implicit, reference standard).\n\n"
+        "Re  : Reynolds number [-]\n"
+        "e_D : relative roughness ε/D [-]"
     );
 }

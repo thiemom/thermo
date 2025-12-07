@@ -53,6 +53,9 @@ try:
         thermal_conductivity,
         kinematic_viscosity,
         prandtl,
+        thermal_diffusivity,
+        reynolds,
+        peclet,
         mole_to_mass,
         mass_to_mole,
         normalize_fractions,
@@ -68,7 +71,10 @@ try:
         humid_air_composition,
         dewpoint,
         relative_humidity_from_dewpoint,
-        species_common_names,
+        formula_to_name,
+        name_to_formula,
+        common_name,
+        formula,
         calc_T_from_h,
         calc_T_from_s,
         calc_T_from_cp,
@@ -103,6 +109,26 @@ try:
         reforming_equilibrium,
         reforming_equilibrium_adiabatic,
         combustion_equilibrium,
+        # Compressible flow
+        CompressibleFlowSolution,
+        NozzleStation,
+        NozzleSolution,
+        FannoStation,
+        FannoSolution,
+        nozzle_flow,
+        solve_A_eff_from_mdot,
+        solve_P_back_from_mdot,
+        solve_P0_from_mdot,
+        critical_pressure_ratio,
+        mach_from_pressure_ratio,
+        mass_flux_isentropic,
+        nozzle_cd,
+        fanno_pipe,
+        fanno_max_length,
+        # Friction
+        friction_haaland,
+        friction_serghides,
+        friction_colebrook,
     )
 except ModuleNotFoundError:
     # Fallback: attempt to import from an installed combaero package that
@@ -122,6 +148,9 @@ except ModuleNotFoundError:
     thermal_conductivity = _core.thermal_conductivity
     kinematic_viscosity = _core.kinematic_viscosity
     prandtl = _core.prandtl
+    thermal_diffusivity = _core.thermal_diffusivity
+    reynolds = _core.reynolds
+    peclet = _core.peclet
     mole_to_mass = _core.mole_to_mass
     mass_to_mole = _core.mass_to_mole
     normalize_fractions = _core.normalize_fractions
@@ -137,7 +166,10 @@ except ModuleNotFoundError:
     humid_air_composition = _core.humid_air_composition
     dewpoint = _core.dewpoint
     relative_humidity_from_dewpoint = _core.relative_humidity_from_dewpoint
-    species_common_names = _core.species_common_names
+    formula_to_name = _core.formula_to_name
+    name_to_formula = _core.name_to_formula
+    common_name = _core.common_name
+    formula = _core.formula
     calc_T_from_h = _core.calc_T_from_h
     calc_T_from_s = _core.calc_T_from_s
     calc_T_from_cp = _core.calc_T_from_cp
@@ -172,6 +204,26 @@ except ModuleNotFoundError:
     reforming_equilibrium = _core.reforming_equilibrium
     reforming_equilibrium_adiabatic = _core.reforming_equilibrium_adiabatic
     combustion_equilibrium = _core.combustion_equilibrium
+    # Compressible flow
+    CompressibleFlowSolution = _core.CompressibleFlowSolution
+    NozzleStation = _core.NozzleStation
+    NozzleSolution = _core.NozzleSolution
+    FannoStation = _core.FannoStation
+    FannoSolution = _core.FannoSolution
+    nozzle_flow = _core.nozzle_flow
+    solve_A_eff_from_mdot = _core.solve_A_eff_from_mdot
+    solve_P_back_from_mdot = _core.solve_P_back_from_mdot
+    solve_P0_from_mdot = _core.solve_P0_from_mdot
+    critical_pressure_ratio = _core.critical_pressure_ratio
+    mach_from_pressure_ratio = _core.mach_from_pressure_ratio
+    mass_flux_isentropic = _core.mass_flux_isentropic
+    nozzle_cd = _core.nozzle_cd
+    fanno_pipe = _core.fanno_pipe
+    fanno_max_length = _core.fanno_max_length
+    # Friction
+    friction_haaland = _core.friction_haaland
+    friction_serghides = _core.friction_serghides
+    friction_colebrook = _core.friction_colebrook
 
 
 __all__ = [
@@ -189,6 +241,9 @@ __all__ = [
     "thermal_conductivity",
     "kinematic_viscosity",
     "prandtl",
+    "thermal_diffusivity",
+    "reynolds",
+    "peclet",
     "mole_to_mass",
     "mass_to_mole",
     "normalize_fractions",
@@ -204,7 +259,10 @@ __all__ = [
     "humid_air_composition",
     "dewpoint",
     "relative_humidity_from_dewpoint",
-    "species_common_names",
+    "formula_to_name",
+    "name_to_formula",
+    "common_name",
+    "formula",
     "calc_T_from_h",
     "calc_T_from_s",
     "calc_T_from_cp",
@@ -239,5 +297,25 @@ __all__ = [
     "reforming_equilibrium",
     "reforming_equilibrium_adiabatic",
     "combustion_equilibrium",
+    # Compressible flow
+    "CompressibleFlowSolution",
+    "NozzleStation",
+    "NozzleSolution",
+    "FannoStation",
+    "FannoSolution",
+    "nozzle_flow",
+    "solve_A_eff_from_mdot",
+    "solve_P_back_from_mdot",
+    "solve_P0_from_mdot",
+    "critical_pressure_ratio",
+    "mach_from_pressure_ratio",
+    "mass_flux_isentropic",
+    "nozzle_cd",
+    "fanno_pipe",
+    "fanno_max_length",
+    # Friction
+    "friction_haaland",
+    "friction_serghides",
+    "friction_colebrook",
     "__version__",
 ]

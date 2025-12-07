@@ -7,6 +7,8 @@ This package provides Python bindings for the core CombAero C++ library:
 - Equivalence ratio and Bilger mixture-fraction utilities
 - Humid air properties and standard dry-air composition
 - Species common-name mapping
+- Compressible flow (isentropic nozzle, quasi-1D, Fanno flow)
+- Friction factor correlations (Colebrook, Haaland, Serghides)
 
 The bindings are implemented with [pybind11](https://pybind11.readthedocs.io/) and built via [scikit-build-core](https://scikit-build-core.readthedocs.io/).
 
@@ -179,4 +181,78 @@ print(f"Mixed mdot: {mixed.mdot:.2f} kg/s")
 
 # Or specify output pressure explicitly
 mixed2 = ca.mix([air, fuel], P_out=150000.0)
+```
+
+### Compressible Flow
+
+```python
+import combaero as ca
+
+X = ca.standard_dry_air_composition()
+
+# Isentropic nozzle flow
+T0, P0 = 500.0, 500000.0  # Stagnation conditions
+P_back = 300000.0  # Back pressure
+A_eff = 0.001  # Effective area [m²]
+
+sol = ca.nozzle_flow(T0, P0, P_back, A_eff, X)
+print(f"Mach: {sol.M:.3f}, mdot: {sol.mdot:.4f} kg/s, choked: {sol.choked}")
+
+# Critical pressure ratio
+P_ratio = ca.critical_pressure_ratio(T0, P0, X)
+print(f"P*/P0 = {P_ratio:.4f}")
+
+# Converging-diverging nozzle with axial profile
+sol_cd = ca.nozzle_cd(
+    T0=600.0, P0=1e6, P_exit=2e5,
+    A_inlet=0.01, A_throat=0.005, A_exit=0.008,
+    x_throat=0.1, x_exit=0.2, X=X
+)
+print(f"Mass flow: {sol_cd.mdot:.4f} kg/s")
+for st in sol_cd.profile[::10]:  # Every 10th station
+    print(f"x={st.x:.3f} m, M={st.M:.3f}, T={st.T:.1f} K")
+
+# Fanno flow (adiabatic pipe with friction)
+f = ca.friction_colebrook(Re=100000, e_D=0.0001)
+sol_fanno = ca.fanno_pipe(T_in=400.0, P_in=5e5, u_in=100.0,
+                          L=5.0, D=0.05, f=f, X=X)
+print(f"Outlet P: {sol_fanno.outlet.P/1000:.1f} kPa")
+```
+
+### Transport Properties
+
+```python
+import combaero as ca
+
+X = ca.standard_dry_air_composition()
+T, P = 300.0, 101325.0
+
+# Basic transport
+print(f"Viscosity: {ca.viscosity(T, P, X):.2e} Pa·s")
+print(f"Thermal conductivity: {ca.thermal_conductivity(T, P, X):.4f} W/(m·K)")
+print(f"Prandtl: {ca.prandtl(T, P, X):.3f}")
+
+# Dimensionless numbers
+V, L = 10.0, 0.1  # Velocity [m/s], length scale [m]
+Re = ca.reynolds(T, P, X, V, L)
+Pe = ca.peclet(T, P, X, V, L)
+print(f"Reynolds: {Re:.0f}, Peclet: {Pe:.0f}")
+```
+
+### Species Common Names
+
+```python
+import combaero as ca
+
+# Formula to common name
+print(ca.common_name("CH4"))  # "Methane"
+print(ca.common_name("N2"))   # "Nitrogen"
+
+# Common name to formula
+print(ca.formula("Methane"))  # "CH4"
+print(ca.formula("Water"))    # "H2O"
+
+# Get full mappings
+formula_map = ca.formula_to_name()  # dict: formula -> name
+name_map = ca.name_to_formula()     # dict: name -> formula
 ```
