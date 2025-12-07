@@ -238,16 +238,6 @@ std::vector<double> complete_combustion_to_CO2_H2O(const std::vector<double>& X)
 // We assume species_names, molar_masses and oxygen_required_per_mol_mixture(X)
 // are defined in thermo_transport_data / this translation unit.
 
-static std::size_t find_species_index(const std::string& name)
-{
-    for (std::size_t k = 0; k < species_names.size(); ++k) {
-        if (species_names[k] == name) {
-            return k;
-        }
-    }
-    throw std::runtime_error("find_species_index: species '" + name + "' not found");
-}
-
 // Stoichiometric fuel-to-oxidizer mole ratio (F/O)_st for a fuel mixture
 // (mole fractions X_fuel) and an oxidizer mixture X_ox (mole fractions).
 //
@@ -263,9 +253,7 @@ static double stoich_f_over_o_mole(
         throw std::invalid_argument("stoich_f_over_o_mole: size mismatch");
     }
 
-    static const std::size_t O2_index = find_species_index("O2");
-
-    const double X_O2_ox = X_ox[O2_index];
+    const double X_O2_ox = X_ox[species_index.at("O2")];
     if (X_O2_ox <= 0.0) {
         throw std::runtime_error(
             "stoich_f_over_o_mole: oxidizer has zero O2 mole fraction");
@@ -428,9 +416,7 @@ static double stoich_f_over_o_mass(
         throw std::invalid_argument("stoich_f_over_o_mass: size mismatch");
     }
 
-    static const std::size_t O2_index = find_species_index("O2");
-
-    const double Y_O2_ox = Y_ox[O2_index];
+    const double Y_O2_ox = Y_ox[species_index.at("O2")];
     if (Y_O2_ox <= 0.0) {
         throw std::runtime_error(
             "stoich_f_over_o_mass: oxidizer has zero O2 mass fraction");
@@ -900,80 +886,50 @@ double compute_Tad_ox(double mdot_ox, const Stream& fuel, const Stream& oxidizer
     return burned.T;
 }
 
-// Helper: compute O2 mole fraction in burned products for given fuel mdot
-double compute_O2_burned_fuel(double mdot_fuel, const Stream& fuel, const Stream& oxidizer) {
+// Helper: compute species mole fraction in burned products
+// vary_fuel: true = vary fuel mdot, false = vary oxidizer mdot
+// dry_basis: true = remove H2O before computing mole fraction
+double compute_species_burned(double mdot_var, const Stream& fuel, const Stream& oxidizer,
+                               const std::string& species, bool vary_fuel, bool dry_basis) {
     Stream fuel_trial = fuel;
-    fuel_trial.mdot = mdot_fuel;
-    Stream mixed = mix({fuel_trial, oxidizer});
-    std::vector<double> X_burned = complete_combustion_to_CO2_H2O(mixed.state.X);
-    return X_burned[species_index.at("O2")];
-}
-
-// Helper: compute O2 mole fraction in burned products for given oxidizer mdot
-double compute_O2_burned_ox(double mdot_ox, const Stream& fuel, const Stream& oxidizer) {
     Stream ox_trial = oxidizer;
-    ox_trial.mdot = mdot_ox;
-    Stream mixed = mix({fuel, ox_trial});
+    if (vary_fuel) {
+        fuel_trial.mdot = mdot_var;
+    } else {
+        ox_trial.mdot = mdot_var;
+    }
+    Stream mixed = mix({fuel_trial, ox_trial});
     std::vector<double> X_burned = complete_combustion_to_CO2_H2O(mixed.state.X);
-    return X_burned[species_index.at("O2")];
+    if (dry_basis) {
+        X_burned = convert_to_dry_fractions(X_burned);
+    }
+    return X_burned[species_index.at(species)];
 }
 
-// Helper: compute CO2 mole fraction in burned products for given fuel mdot
-double compute_CO2_burned_fuel(double mdot_fuel, const Stream& fuel, const Stream& oxidizer) {
-    Stream fuel_trial = fuel;
-    fuel_trial.mdot = mdot_fuel;
-    Stream mixed = mix({fuel_trial, oxidizer});
-    std::vector<double> X_burned = complete_combustion_to_CO2_H2O(mixed.state.X);
-    return X_burned[species_index.at("CO2")];
+// Convenience wrappers for backward compatibility and readability
+double compute_O2_burned_fuel(double mdot, const Stream& f, const Stream& o) {
+    return compute_species_burned(mdot, f, o, "O2", true, false);
 }
-
-// Helper: compute CO2 mole fraction in burned products for given oxidizer mdot
-double compute_CO2_burned_ox(double mdot_ox, const Stream& fuel, const Stream& oxidizer) {
-    Stream ox_trial = oxidizer;
-    ox_trial.mdot = mdot_ox;
-    Stream mixed = mix({fuel, ox_trial});
-    std::vector<double> X_burned = complete_combustion_to_CO2_H2O(mixed.state.X);
-    return X_burned[species_index.at("CO2")];
+double compute_O2_burned_ox(double mdot, const Stream& f, const Stream& o) {
+    return compute_species_burned(mdot, f, o, "O2", false, false);
 }
-
-// Helper: compute dry O2 mole fraction in burned products for given fuel mdot
-double compute_O2_dry_burned_fuel(double mdot_fuel, const Stream& fuel, const Stream& oxidizer) {
-    Stream fuel_trial = fuel;
-    fuel_trial.mdot = mdot_fuel;
-    Stream mixed = mix({fuel_trial, oxidizer});
-    std::vector<double> X_burned = complete_combustion_to_CO2_H2O(mixed.state.X);
-    std::vector<double> X_dry = convert_to_dry_fractions(X_burned);
-    return X_dry[species_index.at("O2")];
+double compute_CO2_burned_fuel(double mdot, const Stream& f, const Stream& o) {
+    return compute_species_burned(mdot, f, o, "CO2", true, false);
 }
-
-// Helper: compute dry O2 mole fraction in burned products for given oxidizer mdot
-double compute_O2_dry_burned_ox(double mdot_ox, const Stream& fuel, const Stream& oxidizer) {
-    Stream ox_trial = oxidizer;
-    ox_trial.mdot = mdot_ox;
-    Stream mixed = mix({fuel, ox_trial});
-    std::vector<double> X_burned = complete_combustion_to_CO2_H2O(mixed.state.X);
-    std::vector<double> X_dry = convert_to_dry_fractions(X_burned);
-    return X_dry[species_index.at("O2")];
+double compute_CO2_burned_ox(double mdot, const Stream& f, const Stream& o) {
+    return compute_species_burned(mdot, f, o, "CO2", false, false);
 }
-
-// Helper: compute dry CO2 mole fraction in burned products for given fuel mdot
-double compute_CO2_dry_burned_fuel(double mdot_fuel, const Stream& fuel, const Stream& oxidizer) {
-    Stream fuel_trial = fuel;
-    fuel_trial.mdot = mdot_fuel;
-    Stream mixed = mix({fuel_trial, oxidizer});
-    std::vector<double> X_burned = complete_combustion_to_CO2_H2O(mixed.state.X);
-    std::vector<double> X_dry = convert_to_dry_fractions(X_burned);
-    return X_dry[species_index.at("CO2")];
+double compute_O2_dry_burned_fuel(double mdot, const Stream& f, const Stream& o) {
+    return compute_species_burned(mdot, f, o, "O2", true, true);
 }
-
-// Helper: compute dry CO2 mole fraction in burned products for given oxidizer mdot
-double compute_CO2_dry_burned_ox(double mdot_ox, const Stream& fuel, const Stream& oxidizer) {
-    Stream ox_trial = oxidizer;
-    ox_trial.mdot = mdot_ox;
-    Stream mixed = mix({fuel, ox_trial});
-    std::vector<double> X_burned = complete_combustion_to_CO2_H2O(mixed.state.X);
-    std::vector<double> X_dry = convert_to_dry_fractions(X_burned);
-    return X_dry[species_index.at("CO2")];
+double compute_O2_dry_burned_ox(double mdot, const Stream& f, const Stream& o) {
+    return compute_species_burned(mdot, f, o, "O2", false, true);
+}
+double compute_CO2_dry_burned_fuel(double mdot, const Stream& f, const Stream& o) {
+    return compute_species_burned(mdot, f, o, "CO2", true, true);
+}
+double compute_CO2_dry_burned_ox(double mdot, const Stream& f, const Stream& o) {
+    return compute_species_burned(mdot, f, o, "CO2", false, true);
 }
 
 }  // anonymous namespace
