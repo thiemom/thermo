@@ -158,3 +158,96 @@ def test_friction_consistency() -> None:
     assert np.isclose(f_serghides, f_colebrook, rtol=0.003)
     # Haaland within ~3%
     assert np.isclose(f_haaland, f_colebrook, rtol=0.03)
+
+
+def test_de_laval_nozzle_supersonic() -> None:
+    """De Laval nozzle: choked flow with supersonic exit."""
+    X = cb.standard_dry_air_composition()
+    
+    # Nozzle geometry
+    A_inlet = 0.002   # m²
+    A_throat = 0.001  # m²
+    A_exit = 0.0015   # m² (area ratio 1.5)
+    x_throat = 0.05
+    x_exit = 0.10
+    
+    T0 = 800.0  # K
+    P0 = 500000.0  # Pa
+    P_exit = 100000.0  # Pa (low enough for supersonic)
+    
+    sol = cb.nozzle_cd(
+        T0, P0, P_exit,
+        A_inlet, A_throat, A_exit,
+        x_throat, x_exit, X,
+        n_stations=50
+    )
+    
+    # Should be choked
+    assert sol.choked
+    assert sol.mdot > 0
+    
+    # Find throat station
+    throat_idx = min(range(len(sol.profile)), 
+                     key=lambda i: abs(sol.profile[i].x - x_throat))
+    throat = sol.profile[throat_idx]
+    
+    # Throat should be near sonic (M ≈ 1)
+    assert 0.9 < throat.M < 1.1
+    
+    # Exit should be supersonic (M > 1)
+    exit_station = sol.profile[-1]
+    assert exit_station.M > 1.0
+
+
+def test_de_laval_nozzle_subsonic() -> None:
+    """De Laval nozzle: subsonic throughout (high back pressure)."""
+    X = cb.standard_dry_air_composition()
+    
+    A_inlet = 0.002
+    A_throat = 0.001
+    A_exit = 0.0015
+    x_throat = 0.05
+    x_exit = 0.10
+    
+    T0 = 800.0
+    P0 = 500000.0
+    P_exit = 400000.0  # High back pressure -> subsonic
+    
+    sol = cb.nozzle_cd(
+        T0, P0, P_exit,
+        A_inlet, A_throat, A_exit,
+        x_throat, x_exit, X,
+        n_stations=50
+    )
+    
+    # Should not be choked with high back pressure
+    assert not sol.choked
+    
+    # Exit should be subsonic
+    exit_station = sol.profile[-1]
+    assert exit_station.M < 1.0
+
+
+def test_nozzle_mass_conservation() -> None:
+    """Mass flow should be constant along nozzle."""
+    X = cb.standard_dry_air_composition()
+    
+    A_inlet = 0.002
+    A_throat = 0.001
+    A_exit = 0.0015
+    
+    T0 = 800.0
+    P0 = 500000.0
+    P_exit = 100000.0
+    
+    sol = cb.nozzle_cd(
+        T0, P0, P_exit,
+        A_inlet, A_throat, A_exit,
+        0.05, 0.10, X,
+        n_stations=50
+    )
+    
+    # Check mass flow at several stations: mdot = rho * u * A
+    for st in sol.profile[::10]:
+        mdot_local = st.rho * st.u * st.A
+        assert np.isclose(mdot_local, sol.mdot, rtol=0.01)
