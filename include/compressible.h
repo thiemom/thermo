@@ -4,6 +4,8 @@
 #include "state.h"
 #include <vector>
 #include <cstddef>
+#include <functional>
+#include <utility>
 
 // -------------------------------------------------------------
 // Compressible flow for ideal gas with variable cp(T)
@@ -14,6 +16,7 @@
 //
 // Includes:
 // - Isentropic nozzle flow (solved numerically since gamma varies with T)
+// - Quasi-1D nozzle flow with variable area A(x)
 // - Fanno flow (adiabatic pipe flow with friction)
 
 // -------------------------------------------------------------
@@ -99,6 +102,99 @@ double mach_from_pressure_ratio(
 double mass_flux_isentropic(
     double T0, double P0, double P,
     const std::vector<double>& X,
+    double tol = 1e-8, std::size_t max_iter = 50);
+
+// -------------------------------------------------------------
+// Quasi-1D nozzle flow with variable area A(x)
+// -------------------------------------------------------------
+// Solves quasi-1D compressible flow through a nozzle with area variation:
+//   - Mass: mdot = ρ * u * A(x) = const
+//   - Energy: h + u²/2 = h0 (adiabatic)
+//   - Momentum: dp/dx + ρ*u*du/dx = 0 (frictionless) or with loss model
+//
+// Marches along x, solving 2×2 nonlinear system (T, P) at each station
+// using Newton iteration with analytic derivatives from thermo backend.
+
+// Function type for area distribution A(x)
+// x: axial position [m], returns area [m²]
+using AreaFunction = std::function<double(double)>;
+
+// Station data for quasi-1D nozzle flow
+struct NozzleStation {
+    double x = 0.0;      // Axial position [m]
+    double A = 0.0;      // Area [m²]
+    double P = 0.0;      // Static pressure [Pa]
+    double T = 0.0;      // Static temperature [K]
+    double rho = 0.0;    // Density [kg/m³]
+    double u = 0.0;      // Velocity [m/s]
+    double M = 0.0;      // Mach number [-]
+    double h = 0.0;      // Specific enthalpy [J/kg]
+};
+
+// Result of quasi-1D nozzle calculation
+struct NozzleSolution {
+    State inlet;                         // Inlet thermodynamic state
+    State outlet;                        // Outlet thermodynamic state
+    double mdot = 0.0;                   // Mass flow rate [kg/s]
+    double h0 = 0.0;                     // Stagnation enthalpy [J/kg]
+    double T0 = 0.0;                     // Stagnation temperature [K]
+    double P0 = 0.0;                     // Stagnation pressure [Pa]
+    bool choked = false;                 // True if throat is sonic
+    double x_throat = 0.0;               // Throat position [m]
+    double A_throat = 0.0;               // Throat area [m²]
+    std::vector<NozzleStation> profile;  // Axial profile
+};
+
+// Solve quasi-1D nozzle flow with given area distribution.
+//
+// Inputs:
+//   T0, P0    : Stagnation conditions [K, Pa]
+//   P_exit    : Exit static pressure [Pa] (determines if subsonic/supersonic)
+//   area_func : Function A(x) returning area [m²] at position x [m]
+//   x_start   : Start position [m]
+//   x_end     : End position [m]
+//   X         : Mole fractions [-]
+//   n_stations: Number of axial stations (default: 100)
+//
+// Returns NozzleSolution with axial profile.
+// For subsonic flow throughout, P decreases then increases.
+// For choked flow, throat is sonic (M=1) at minimum area.
+NozzleSolution nozzle_quasi1d(
+    double T0, double P0, double P_exit,
+    const AreaFunction& area_func,
+    double x_start, double x_end,
+    const std::vector<double>& X,
+    std::size_t n_stations = 100,
+    double tol = 1e-8, std::size_t max_iter = 50);
+
+// Convenience: solve with area given as vector of (x, A) pairs
+// Linearly interpolates between points.
+NozzleSolution nozzle_quasi1d(
+    double T0, double P0, double P_exit,
+    const std::vector<std::pair<double, double>>& area_profile,  // (x, A) pairs
+    const std::vector<double>& X,
+    std::size_t n_stations = 100,
+    double tol = 1e-8, std::size_t max_iter = 50);
+
+// Convenience: solve with polynomial area distribution
+// A(x) = a0 + a1*x + a2*x² + ...
+NozzleSolution nozzle_quasi1d_poly(
+    double T0, double P0, double P_exit,
+    const std::vector<double>& area_coeffs,  // Polynomial coefficients [a0, a1, a2, ...]
+    double x_start, double x_end,
+    const std::vector<double>& X,
+    std::size_t n_stations = 100,
+    double tol = 1e-8, std::size_t max_iter = 50);
+
+// Convenience: solve for converging-diverging nozzle with given geometry
+// A(x) = A_inlet at x=0, A_throat at x=x_throat, A_exit at x=x_exit
+// Uses smooth cosine interpolation between sections.
+NozzleSolution nozzle_cd(
+    double T0, double P0, double P_exit,
+    double A_inlet, double A_throat, double A_exit,
+    double x_throat, double x_exit,
+    const std::vector<double>& X,
+    std::size_t n_stations = 100,
     double tol = 1e-8, std::size_t max_iter = 50);
 
 // -------------------------------------------------------------

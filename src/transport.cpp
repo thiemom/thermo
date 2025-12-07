@@ -251,3 +251,30 @@ double thermal_diffusivity(double T, double P, const std::vector<double>& X)
 
     return k / (rho_val * Cp_mass);
 }
+
+// Reynolds number (dimensionless)
+// Re = ρ * V * L / μ
+double reynolds(double T, double P, const std::vector<double>& X, double V, double L)
+{
+    double rho_val = density(T, P, X);
+    double mu = viscosity(T, P, X);
+
+    if (mu <= 0.0) {
+        throw std::runtime_error("reynolds: viscosity must be positive");
+    }
+
+    return (rho_val * V * L) / mu;
+}
+
+// Peclet number (thermal, dimensionless)
+// Pe = V * L / α  (ratio of convective to conductive heat transfer)
+double peclet(double T, double P, const std::vector<double>& X, double V, double L)
+{
+    double alpha = thermal_diffusivity(T, P, X);
+
+    if (alpha <= 0.0) {
+        throw std::runtime_error("peclet: thermal diffusivity must be positive");
+    }
+
+    return (V * L) / alpha;
+}

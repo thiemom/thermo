@@ -13,6 +13,7 @@ double thermal_conductivity(double T, double P, const std::vector<double>& X);
 double prandtl(double T, double P, const std::vector<double>& X);
 double kinematic_viscosity(double T, double P, const std::vector<double>& X);
 double thermal_diffusivity(double T, double P, const std::vector<double>& X);  // α = k/(ρ·cp) [m²/s]
-
+double reynolds(double T, double P, const std::vector<double>& X, double V, double L);  // Re = ρVL/μ [-]
+double peclet(double T, double P, const std::vector<double>& X, double V, double L);    // Pe = VL/α [-]
 
 #endif // TRANSPORT_H

@@ -4,22 +4,26 @@ This document provides detailed API reference for LLMs and developers.
 
 ## Species
 
-The library uses a fixed set of 12 species with 0-indexed positions:
+The library uses a fixed set of 14 species. Use `species_index_from_name()` for robust lookup:
 
 | Index | Formula | Common Name |
 |-------|---------|-------------|
 | 0 | N2 | Nitrogen |
 | 1 | O2 | Oxygen |
-| 2 | H2 | Hydrogen |
-| 3 | H2O | Water |
-| 4 | CO | Carbon Monoxide |
-| 5 | CO2 | Carbon Dioxide |
-| 6 | CH4 | Methane |
-| 7 | C2H6 | Ethane |
-| 8 | C3H8 | Propane |
-| 9 | C4H10 | Butane |
-| 10 | Ar | Argon |
-| 11 | He | Helium |
+| 2 | AR | Argon |
+| 3 | CO2 | Carbon Dioxide |
+| 4 | H2O | Water |
+| 5 | CH4 | Methane |
+| 6 | C2H6 | Ethane |
+| 7 | C3H8 | Propane |
+| 8 | IC4H10 | Isobutane |
+| 9 | NC5H12 | n-Pentane |
+| 10 | NC6H14 | n-Hexane |
+| 11 | NC7H16 | n-Heptane |
+| 12 | CO | Carbon Monoxide |
+| 13 | H2 | Hydrogen |
+
+**Note**: Always use `species_index_from_name("CH4")` rather than hardcoded indices for forward compatibility.
 
 ## Inverse Combustion Solvers
 
@@ -192,9 +196,13 @@ double speed_of_sound(double T, const std::vector<double>& X);     // m/s
 ## Transport Properties
 
 ```cpp
-double viscosity(double T, const std::vector<double>& X);           // Pa·s
-double thermal_conductivity(double T, const std::vector<double>& X); // W/(m·K)
-double prandtl(double T, const std::vector<double>& X);             // dimensionless
+double viscosity(double T, double P, const std::vector<double>& X);           // Pa·s
+double thermal_conductivity(double T, double P, const std::vector<double>& X); // W/(m·K)
+double prandtl(double T, double P, const std::vector<double>& X);             // dimensionless
+double kinematic_viscosity(double T, double P, const std::vector<double>& X); // m²/s (ν = μ/ρ)
+double thermal_diffusivity(double T, double P, const std::vector<double>& X); // m²/s (α = k/(ρ·cp))
+double reynolds(double T, double P, const std::vector<double>& X, double V, double L);  // Re = ρVL/μ
+double peclet(double T, double P, const std::vector<double>& X, double V, double L);    // Pe = VL/α
 ```
 
 ## Utility Functions
@@ -265,6 +273,61 @@ double solve_P0_from_mdot(double T0, double P_back, double A_eff, double mdot_ta
 double critical_pressure_ratio(double T0, double P0, const std::vector<double>& X, ...);
 double mach_from_pressure_ratio(double T0, double P0, double P, const std::vector<double>& X, ...);
 double mass_flux_isentropic(double T0, double P0, double P, const std::vector<double>& X, ...);
+```
+
+### Quasi-1D Nozzle Flow
+
+Solves quasi-1D compressible flow through a nozzle with variable area A(x):
+- Mass: ṁ = ρuA = const
+- Energy: h + u²/2 = h₀ (adiabatic)
+- Momentum: dp/dx + ρu·du/dx = 0
+
+```cpp
+// General form with area function A(x)
+NozzleSolution nozzle_quasi1d(
+    double T0, double P0, double P_exit,
+    const AreaFunction& area_func,    // std::function<double(double)>
+    double x_start, double x_end,
+    const std::vector<double>& X,
+    std::size_t n_stations = 100,
+    double tol = 1e-8, std::size_t max_iter = 50
+);
+
+// With area as (x, A) pairs (linearly interpolated)
+NozzleSolution nozzle_quasi1d(
+    double T0, double P0, double P_exit,
+    const std::vector<std::pair<double, double>>& area_profile,
+    const std::vector<double>& X, ...);
+
+// With polynomial area: A(x) = a₀ + a₁x + a₂x² + ...
+NozzleSolution nozzle_quasi1d_poly(
+    double T0, double P0, double P_exit,
+    const std::vector<double>& area_coeffs,
+    double x_start, double x_end,
+    const std::vector<double>& X, ...);
+
+// Converging-diverging nozzle with smooth cosine profile
+NozzleSolution nozzle_cd(
+    double T0, double P0, double P_exit,
+    double A_inlet, double A_throat, double A_exit,
+    double x_throat, double x_exit,
+    const std::vector<double>& X, ...);
+```
+
+#### NozzleSolution Structure
+
+```cpp
+struct NozzleStation {
+    double x, A, P, T, rho, u, M, h;  // Axial profile data
+};
+
+struct NozzleSolution {
+    State inlet, outlet;              // Inlet/outlet states
+    double mdot, h0, T0, P0;          // Flow parameters
+    bool choked;                      // True if throat is sonic
+    double x_throat, A_throat;        // Throat location and area
+    std::vector<NozzleStation> profile; // Axial profile
+};
 ```
 
 ### Fanno Flow (Adiabatic Pipe with Friction)

@@ -2839,3 +2839,184 @@ TEST_F(ThermoTransportTest, FannoFlowInvalidInputs) {
     // Invalid f (negative)
     EXPECT_THROW(fanno_pipe(400.0, 200000.0, 50.0, 10.0, 0.05, -0.02, X_air), std::invalid_argument);
 }
+
+// =============================================================================
+// Quasi-1D Nozzle Flow Tests
+// =============================================================================
+
+TEST(Quasi1DNozzle, SubsonicConvergingDiverging) {
+    // Subsonic flow through C-D nozzle (high back pressure)
+    // Species: N2, O2, AR, CO2, H2O, CH4, C2H6, C3H8, IC4H10, NC5H12, NC6H14, NC7H16, CO, H2
+    std::vector<double> X_air = {0.79, 0.21, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    
+    double T0 = 500.0;  // K
+    double P0 = 500000.0;  // Pa
+    double P_exit = 450000.0;  // High back pressure -> subsonic
+    
+    double A_inlet = 0.01;   // m²
+    double A_throat = 0.005; // m²
+    double A_exit = 0.01;    // m²
+    double x_throat = 0.1;   // m
+    double x_exit = 0.2;     // m
+    
+    auto sol = nozzle_cd(T0, P0, P_exit, A_inlet, A_throat, A_exit, x_throat, x_exit, X_air, 50);
+    
+    // Should not be choked
+    EXPECT_FALSE(sol.choked);
+    
+    // Mass flow should be positive
+    EXPECT_GT(sol.mdot, 0.0);
+    
+    // Exit pressure should match (approximately) the specified back pressure
+    EXPECT_NEAR(sol.outlet.P, P_exit, P_exit * 0.05);
+    
+    // Temperature should drop then recover (subsonic)
+    EXPECT_LT(sol.outlet.T, T0);
+    
+    // Profile should have stations
+    EXPECT_EQ(sol.profile.size(), 50u);
+    
+    // Mach should be < 1 everywhere
+    for (const auto& st : sol.profile) {
+        EXPECT_LT(st.M, 1.0);
+    }
+}
+
+TEST(Quasi1DNozzle, ChokedConvergingDiverging) {
+    // Choked flow through C-D nozzle (low back pressure)
+    std::vector<double> X_air = {0.79, 0.21, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    
+    double T0 = 500.0;  // K
+    double P0 = 500000.0;  // Pa
+    double P_exit = 50000.0;  // Low back pressure -> choked, supersonic exit
+    
+    double A_inlet = 0.01;
+    double A_throat = 0.005;
+    double A_exit = 0.01;
+    double x_throat = 0.1;
+    double x_exit = 0.2;
+    
+    auto sol = nozzle_cd(T0, P0, P_exit, A_inlet, A_throat, A_exit, x_throat, x_exit, X_air, 100);
+    
+    // Should be choked
+    EXPECT_TRUE(sol.choked);
+    
+    // Mass flow should be positive
+    EXPECT_GT(sol.mdot, 0.0);
+    
+    // Throat should be at minimum area
+    EXPECT_NEAR(sol.x_throat, x_throat, 0.01);
+    EXPECT_NEAR(sol.A_throat, A_throat, 1e-6);
+    
+    // Exit Mach should be supersonic
+    EXPECT_GT(sol.profile.back().M, 1.0);
+    
+    // Temperature should drop significantly
+    EXPECT_LT(sol.outlet.T, T0 * 0.8);
+}
+
+TEST(Quasi1DNozzle, MassConservation) {
+    // Verify mass conservation along nozzle
+    std::vector<double> X_air = {0.79, 0.21, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    
+    double T0 = 600.0;
+    double P0 = 300000.0;
+    double P_exit = 100000.0;
+    
+    auto sol = nozzle_cd(T0, P0, P_exit, 0.02, 0.01, 0.015, 0.1, 0.2, X_air, 50);
+    
+    // Check mass conservation at each station
+    for (const auto& st : sol.profile) {
+        double mdot_local = st.rho * st.u * st.A;
+        EXPECT_NEAR(mdot_local, sol.mdot, sol.mdot * 0.02);  // 2% tolerance
+    }
+}
+
+TEST(Quasi1DNozzle, AreaFunctionInterface) {
+    // Test with custom area function
+    std::vector<double> X_air = {0.79, 0.21, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    
+    double T0 = 500.0;
+    double P0 = 400000.0;
+    double P_exit = 200000.0;
+    
+    // Linear converging nozzle: A(x) = 0.01 - 0.05*x for x in [0, 0.1]
+    auto area_func = [](double x) {
+        return 0.01 - 0.05 * x;  // Converges from 0.01 to 0.005
+    };
+    
+    auto sol = nozzle_quasi1d(T0, P0, P_exit, area_func, 0.0, 0.1, X_air, 20);
+    
+    EXPECT_GT(sol.mdot, 0.0);
+    EXPECT_EQ(sol.profile.size(), 20u);
+    
+    // Area should decrease along nozzle
+    EXPECT_GT(sol.profile.front().A, sol.profile.back().A);
+}
+
+TEST(Quasi1DNozzle, AreaProfileInterface) {
+    // Test with (x, A) pairs
+    std::vector<double> X_air = {0.79, 0.21, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    
+    double T0 = 500.0;
+    double P0 = 400000.0;
+    double P_exit = 300000.0;
+    
+    std::vector<std::pair<double, double>> area_profile = {
+        {0.0, 0.01},
+        {0.05, 0.007},
+        {0.1, 0.005},
+        {0.15, 0.007},
+        {0.2, 0.01}
+    };
+    
+    auto sol = nozzle_quasi1d(T0, P0, P_exit, area_profile, X_air, 30);
+    
+    EXPECT_GT(sol.mdot, 0.0);
+    EXPECT_EQ(sol.profile.size(), 30u);
+    
+    // Throat should be near x = 0.1
+    EXPECT_NEAR(sol.x_throat, 0.1, 0.01);
+}
+
+TEST(Quasi1DNozzle, PolynomialArea) {
+    // Test with polynomial area: A(x) = 0.01 - 0.1*x + 0.5*x²
+    // This gives a minimum at x = 0.1
+    std::vector<double> X_air = {0.79, 0.21, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    
+    double T0 = 500.0;
+    double P0 = 400000.0;
+    double P_exit = 350000.0;
+    
+    std::vector<double> coeffs = {0.01, -0.1, 0.5};  // a0 + a1*x + a2*x²
+    
+    auto sol = nozzle_quasi1d_poly(T0, P0, P_exit, coeffs, 0.0, 0.2, X_air, 25);
+    
+    EXPECT_GT(sol.mdot, 0.0);
+    EXPECT_EQ(sol.profile.size(), 25u);
+    
+    // Throat should be near x = 0.1 (minimum of parabola)
+    EXPECT_NEAR(sol.x_throat, 0.1, 0.01);
+}
+
+TEST(Quasi1DNozzle, InvalidInputs) {
+    std::vector<double> X_air = {0.79, 0.21, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    
+    auto area_func = [](double x) { return 0.01 - 0.05 * x; };
+    
+    // Invalid T0
+    EXPECT_THROW(nozzle_quasi1d(0.0, 400000.0, 200000.0, area_func, 0.0, 0.1, X_air), 
+                 std::invalid_argument);
+    
+    // Invalid P0
+    EXPECT_THROW(nozzle_quasi1d(500.0, 0.0, 200000.0, area_func, 0.0, 0.1, X_air), 
+                 std::invalid_argument);
+    
+    // P_exit >= P0
+    EXPECT_THROW(nozzle_quasi1d(500.0, 400000.0, 500000.0, area_func, 0.0, 0.1, X_air), 
+                 std::invalid_argument);
+    
+    // Invalid C-D nozzle geometry
+    EXPECT_THROW(nozzle_cd(500.0, 400000.0, 200000.0, 0.01, 0.02, 0.01, 0.1, 0.2, X_air), 
+                 std::invalid_argument);  // A_throat > A_inlet
+}
