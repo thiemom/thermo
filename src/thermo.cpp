@@ -370,6 +370,11 @@ double density(double T, double P, const std::vector<double>& X) {
     return P * MW / (R_GAS * T);
 }
 
+// Ideal gas molar volume [m³/mol]
+double molar_volume(double T, double P) {
+    return R_GAS * T / P;
+}
+
 // Calculate specific gas constant [J/(kg·K)]
 double specific_gas_constant(const std::vector<double>& X) {
     // R_specific = R_universal / MW

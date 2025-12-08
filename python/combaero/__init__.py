@@ -49,6 +49,7 @@ try:
         specific_gas_constant,
         isentropic_expansion_coefficient,
         speed_of_sound,
+        molar_volume,
         viscosity,
         thermal_conductivity,
         kinematic_viscosity,
@@ -186,6 +187,7 @@ except ModuleNotFoundError:
     specific_gas_constant = _core.specific_gas_constant
     isentropic_expansion_coefficient = _core.isentropic_expansion_coefficient
     speed_of_sound = _core.speed_of_sound
+    molar_volume = _core.molar_volume
     viscosity = _core.viscosity
     thermal_conductivity = _core.thermal_conductivity
     kinematic_viscosity = _core.kinematic_viscosity
@@ -321,6 +323,7 @@ __all__ = [
     "specific_gas_constant",
     "isentropic_expansion_coefficient",
     "speed_of_sound",
+    "molar_volume",
     "viscosity",
     "thermal_conductivity",
     "kinematic_viscosity",

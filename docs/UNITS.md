@@ -101,6 +101,7 @@ All functions use consistent units to avoid conversion errors.
 | Function                           | Input Units             | Output Unit |
 |------------------------------------|-------------------------|-------------|
 | `density`                          | T: K, P: Pa, X: mol/mol | kg/m^3      |
+| `molar_volume`                     | T: K, P: Pa             | m^3/mol     |
 | `specific_gas_constant`            | X: mol/mol              | J/(kg*K)    |
 | `isentropic_expansion_coefficient` | T: K, X: mol/mol        | - (gamma)   |
 | `speed_of_sound`                   | T: K, X: mol/mol        | m/s         |

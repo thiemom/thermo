@@ -62,6 +62,7 @@ double s(double T, const std::vector<double>& X, double P, double P_ref = 101325
 double cv(double T, const std::vector<double>& X);
 double u(double T, const std::vector<double>& X);  // Internal energy [J/mol]
 double density(double T, double P, const std::vector<double>& X);
+double molar_volume(double T, double P);  // Ideal gas molar volume [m³/mol]
 double specific_gas_constant(const std::vector<double>& X);
 double isentropic_expansion_coefficient(double T, const std::vector<double>& X);
 double speed_of_sound(double T, const std::vector<double>& X);

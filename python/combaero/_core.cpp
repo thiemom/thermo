@@ -216,6 +216,14 @@ PYBIND11_MODULE(_core, m)
         "Speed of sound c(T, X) [m/s]."
     );
 
+    m.def(
+        "molar_volume",
+        &molar_volume,
+        py::arg("T"),
+        py::arg("P"),
+        "Ideal gas molar volume V_m = R*T/P [m³/mol]."
+    );
+
     // Transport properties
     m.def(
         "viscosity",
