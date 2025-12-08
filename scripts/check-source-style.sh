@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Check for non-ASCII characters and block comments in source code.
+# Check for source code style violations.
 # Returns non-zero if violations are found.
 #
 # Usage:
-#   scripts/check-non-ascii.sh [--verbose] [--strict]
+#   scripts/check-source-style.sh [--verbose] [--strict]
 #
 # Options:
 #   --verbose   Show all matches with line content
@@ -14,6 +14,7 @@ set -euo pipefail
 # Checks:
 #   1. Non-ASCII characters (0x80-0xFF) outside comments and strings
 #   2. Block comments (/* ... */) - only line comments (//) are allowed
+#   3. M_PI usage without math_constants.h (MSVC compatibility)
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -166,6 +167,45 @@ if [[ ${#BLOCK_COMMENT_FILES[@]} -gt 0 ]]; then
     echo ""
     echo "Manual check command:"
     echo "  grep -r -n --include='*.cpp' --include='*.h' '/\\*' src/ include/"
+    echo ""
+fi
+
+# Check for M_PI usage without math_constants.h include
+# M_PI is a POSIX extension not available on MSVC by default
+M_PI_VIOLATIONS=()
+for dir in "${SCAN_DIRS[@]}"; do
+    if [[ -d "$dir" ]]; then
+        while IFS= read -r file; do
+            # Check if file uses M_PI
+            if grep -q 'M_PI' "$file" 2>/dev/null; then
+                # Check if it includes math_constants.h
+                if ! grep -q 'math_constants\.h' "$file" 2>/dev/null; then
+                    # Skip math_constants.h itself
+                    if [[ "$file" != *"math_constants.h" ]]; then
+                        M_PI_VIOLATIONS+=("$file")
+                    fi
+                fi
+            fi
+        done < <(find "$dir" -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) 2>/dev/null)
+    fi
+done
+
+if [[ ${#M_PI_VIOLATIONS[@]} -gt 0 ]]; then
+    HAS_ERRORS=true
+    echo ""
+    echo "=========================================="
+    echo "ERROR: M_PI used without math_constants.h"
+    echo "=========================================="
+    echo "M_PI is a POSIX extension not available on MSVC."
+    echo "Include math_constants.h for cross-platform compatibility."
+    echo ""
+    echo "Files missing include:"
+    for f in "${M_PI_VIOLATIONS[@]}"; do
+        echo "  - $f"
+    done
+    echo ""
+    echo "Fix: Add this include to each file:"
+    echo '  #include "math_constants.h"  // MSVC compatibility for M_PI'
     echo ""
 fi
 
