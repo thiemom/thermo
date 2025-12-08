@@ -8,6 +8,10 @@ Thank you for your interest in contributing to the CombAero project! This docume
 - Follow C++17 best practices
 - Include descriptive comments for complex algorithms
 - Add documentation for public APIs
+- **ASCII only**: No non-ASCII characters in code (allowed in comments and string literals)
+- **Line comments only**: Use `//` comments, not `/* */` block comments
+
+These rules are enforced by `scripts/check-source-style.sh` which runs automatically during build.
 
 ## Development Workflow
 

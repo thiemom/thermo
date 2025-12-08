@@ -7,12 +7,11 @@
 #include <vector>
 #include <iomanip>
 
-/**
- * Thermodynamic and Transport Properties Example
- * 
- * This example demonstrates the calculation of various thermodynamic
- * and transport properties for gas mixtures using the thermo library.
- */
+// Thermodynamic and Transport Properties Example
+//
+// This example demonstrates the calculation of various thermodynamic
+// and transport properties for gas mixtures using the thermo library.
+
 int main() {
     // Set precision for output
     std::cout << std::fixed << std::setprecision(6);

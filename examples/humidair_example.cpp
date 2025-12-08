@@ -6,12 +6,11 @@
 #include "../include/transport.h"
 #include "../include/humidair.h"
 
-/**
- * Humid Air Properties Example
- * 
- * This example demonstrates the calculation of various properties
- * of humid air using the Hyland and Wexler equations.
- */
+// Humid Air Properties Example
+//
+// This example demonstrates the calculation of various properties
+// of humid air using the Hyland and Wexler equations.
+
 int main() {
     // Set precision for output
     std::cout << std::fixed << std::setprecision(6);

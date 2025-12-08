@@ -13,74 +13,75 @@ temp/
 *.swp
 *~
 
-# Compiled Object files
-*.slo
-*.lo
+# Compiled objects
 *.o
 *.obj
+*.lo
+*.slo
 
-# Precompiled Headers
+# Precompiled headers
 *.gch
 *.pch
 
-# Compiled Dynamic libraries
+# Libraries
 *.so
 *.dylib
 *.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
 *.a
 *.lib
+*.la
+*.lai
+
+# Fortran modules
+*.mod
+*.smod
 
 # Executables
 *.exe
 *.out
 *.app
 
-# CMake generated files
+# CMake
 CMakeCache.txt
 CMakeFiles/
 *.cmake
 !CMakeLists.txt
 
-# macOS specific
+# macOS
 .DS_Store
 
-# Windows / Linux OS-specific
+# Windows
 Thumbs.db
-Thumbs.db:encryptable
 Desktop.ini
 $RECYCLE.BIN/
-ehthumbs.db
-Icon?
-.Spotlight-V100
-.Trashes
-.fseventsd
+
+# Linux
 .directory
 
-# Python artifacts
+# Python
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
 .pytest_cache/
 .cache/
-
-# Python build output
 dist/
 .venv/
+*.egg-info/
 
-# scikit-build-core sdist staging dir
+# scikit-build-core
+_skbuild/
 -sdist/
 
-# Generated thermo_data_generator artifacts
+# Generated artifacts
 thermo_data_generator/test_create_cpp_header_output.txt
 thermo_data_generator/thermo_transport_data.h
 
-# CTest runtime output
+# Example output (plots, data)
+examples/*.png
+examples/*.csv
+examples/*.dat
+
+# CTest
 Testing/
 tests/Testing/

@@ -4,16 +4,15 @@
 #include <cmath>
 #include "../include/humidair.h"
 
-/**
- * Test for Ice Equation Accuracy
- * 
- * This test validates that the saturation vapor pressure calculation
- * for ice in the range -80°C to 0°C meets the claimed accuracy in the Hyland-Wexler paper,
- * which is a maximum relative error of 0.023%.
- * 
- * Note: The extreme temperature of -100°C is excluded as it's at the boundary of the
- * validated range and shows higher relative errors.
- */
+// Test for Ice Equation Accuracy
+//
+// This test validates that the saturation vapor pressure calculation
+// for ice in the range -80 deg C to 0 deg C meets the claimed accuracy in the Hyland-Wexler paper,
+// which is a maximum relative error of 0.023%.
+//
+// Note: The extreme temperature of -100 deg C is excluded as it's at the boundary of the
+// validated range and shows higher relative errors.
+
 int main() {
     // Reference data from the paper for ice (-80°C to 0°C)
     // Note: Excluding the extreme temperature of -100°C which is at the boundary

@@ -109,6 +109,22 @@ if (COMBAERO_BUILD_PYTHON)
     install(TARGETS _core DESTINATION ${_proj_name})
 endif()
 
+# Pre-build source code checks (non-ASCII detection)
+option(COMBAERO_ENABLE_SOURCE_CHECKS "Run source code quality checks before build" ON)
+
+if (COMBAERO_ENABLE_SOURCE_CHECKS AND NOT WIN32)
+    find_program(BASH_EXECUTABLE bash)
+    if (BASH_EXECUTABLE)
+        add_custom_target(check_source_style ALL
+            COMMAND ${BASH_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check-source-style.sh
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMENT "Checking source code style (non-ASCII, block comments)..."
+        )
+        # Make library depend on the check
+        add_dependencies(combaero_lib check_source_style)
+    endif()
+endif()
+
 # Testing setup (can be disabled, e.g. for Python wheel builds)
 option(COMBAERO_ENABLE_TESTS "Enable building C++ tests" ON)
 

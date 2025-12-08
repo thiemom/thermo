@@ -6,14 +6,13 @@
 #include <vector>
 #include <iomanip>
 
-/**
- * CombAero Library Main Example
- * 
- * This file provides a simple demonstration of the combaero library's capabilities.
- * For more detailed examples, see the examples directory:
- * - examples/thermo_example.cpp: Demonstrates thermodynamic and transport properties
- * - examples/humidair_example.cpp: Demonstrates humid air calculations
- */
+// CombAero Library Main Example
+//
+// This file provides a simple demonstration of the combaero library's capabilities.
+// For more detailed examples, see the examples directory:
+// - examples/thermo_example.cpp: Demonstrates thermodynamic and transport properties
+// - examples/humidair_example.cpp: Demonstrates humid air calculations
+
 int main() {
     // Set precision for output
     std::cout << std::fixed << std::setprecision(6);

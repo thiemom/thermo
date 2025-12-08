@@ -8,15 +8,14 @@
 #include <iomanip>
 #include <vector>
 
-/**
- * Combustion Example: Fuel + Humid Air -> Mix -> Combust -> Equilibrium
- *
- * Demonstrates:
- * - Using set_fuel_stream_for_phi to configure fuel stream for target phi
- * - Stream mixing with enthalpy balance
- * - combustion_equilibrium: one-step combustion + reforming + WGS equilibrium
- * - Varying equivalence ratio from lean to rich
- */
+// Combustion Example: Fuel + Humid Air -> Mix -> Combust -> Equilibrium
+//
+// Demonstrates:
+// - Using set_fuel_stream_for_phi to configure fuel stream for target phi
+// - Stream mixing with enthalpy balance
+// - combustion_equilibrium: one-step combustion + reforming + WGS equilibrium
+// - Varying equivalence ratio from lean to rich
+
 int main()
 {
     std::cout << std::fixed << std::setprecision(4);
