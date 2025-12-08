@@ -38,8 +38,15 @@ python extract_species_data.py \
 ### Step 3: Generate C++ Header
 
 ```bash
+# From YAML mechanism (NASA-7)
 python generate_thermo_data.py \
     --mechanism mechanism.yaml \
+    --species "N2,O2,AR,CO2,H2O,CH4,C2H6,C3H8,H2,CO" \
+    --output ../include/thermo_transport_data.h
+
+# From merged JSON (NASA-9 preferred)
+python generate_thermo_data.py \
+    --json species.json \
     --species "N2,O2,AR,CO2,H2O,CH4,C2H6,C3H8,H2,CO" \
     --output ../include/thermo_transport_data.h
 ```
@@ -49,7 +56,7 @@ python generate_thermo_data.py \
 | Script | Purpose |
 |--------|---------|
 | `extract_species_data.py` | **Unified extractor** - extracts from YAML and/or CEA to JSON |
-| `generate_thermo_data.py` | **Header generator** - creates C++ header from YAML mechanism |
+| `generate_thermo_data.py` | **Header generator** - creates C++ header from YAML or JSON |
 
 ### Legacy Scripts (deprecated)
 

@@ -1,6 +1,7 @@
 #include "../include/thermo.h"
 #include "../include/thermo_transport_data.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <iostream>
 #include <numeric>
@@ -93,96 +94,96 @@ std::vector<double> mass_to_mole(const std::vector<double>& Y)
     return X;
 }
 
+// Helper: find the correct interval for NASA-9 coefficients
+// Returns pointer to the 10-coefficient array for the given temperature
+static const std::array<double, 10>* find_nasa9_interval(
+    const NASA_Coeffs& nasa, double& T, std::size_t species_idx) {
+    
+    const auto& intervals = nasa.intervals;
+    if (intervals.empty()) {
+        throw std::runtime_error("No NASA-9 intervals for species " + species_names[species_idx]);
+    }
+    
+    // Check bounds
+    double T_min = intervals.front().T_min;
+    double T_max = intervals.back().T_max;
+    
+    if (T < T_min) {
+        std::cerr << "Warning: Temperature " << T << " K is below valid range (" << T_min
+                  << " K) for species " << species_names[species_idx] << std::endl;
+        T = T_min;
+    } else if (T > T_max) {
+        std::cerr << "Warning: Temperature " << T << " K is above valid range (" << T_max
+                  << " K) for species " << species_names[species_idx] << std::endl;
+        T = T_max;
+    }
+    
+    // Find the interval containing T
+    for (const auto& interval : intervals) {
+        if (T >= interval.T_min && T <= interval.T_max) {
+            return &interval.coeffs;
+        }
+    }
+    
+    // Fallback to last interval (shouldn't happen if bounds check worked)
+    return &intervals.back().coeffs;
+}
+
+// NASA-9 polynomial for Cp/R: a1/T^2 + a2/T + a3 + a4*T + a5*T^2 + a6*T^3 + a7*T^4
+static double cp_R_nasa9(const std::array<double, 10>& a, double T) {
+    double T2 = T * T;
+    return a[0] / T2 + a[1] / T + a[2] + a[3] * T + a[4] * T2 + a[5] * T2 * T + a[6] * T2 * T2;
+}
+
+// NASA-9 polynomial for H/RT: -a1/T^2 + a2*ln(T)/T + a3 + a4*T/2 + a5*T^2/3 + a6*T^3/4 + a7*T^4/5 + b1/T
+static double h_RT_nasa9(const std::array<double, 10>& a, double T) {
+    double T2 = T * T;
+    return -a[0] / T2 + a[1] * std::log(T) / T + a[2] + a[3] * T / 2.0 + a[4] * T2 / 3.0 
+           + a[5] * T2 * T / 4.0 + a[6] * T2 * T2 / 5.0 + a[8] / T;
+}
+
+// NASA-9 polynomial for S/R: -a1/(2*T^2) - a2/T + a3*ln(T) + a4*T + a5*T^2/2 + a6*T^3/3 + a7*T^4/4 + b2
+static double s_R_nasa9(const std::array<double, 10>& a, double T) {
+    double T2 = T * T;
+    return -a[0] / (2.0 * T2) - a[1] / T + a[2] * std::log(T) + a[3] * T + a[4] * T2 / 2.0 
+           + a[5] * T2 * T / 3.0 + a[6] * T2 * T2 / 4.0 + a[9];
+}
+
+// NASA-9 derivative of Cp/R with respect to T:
+// d(Cp/R)/dT = -2*a1/T^3 - a2/T^2 + a4 + 2*a5*T + 3*a6*T^2 + 4*a7*T^3
+static double dcp_R_dT_nasa9(const std::array<double, 10>& a, double T) {
+    double T2 = T * T;
+    double T3 = T2 * T;
+    return -2.0 * a[0] / T3 - a[1] / T2 + a[3] + 2.0 * a[4] * T + 3.0 * a[5] * T2 + 4.0 * a[6] * T3;
+}
+
+// NASA-9 derivative of S/R with respect to T:
+// d(S/R)/dT = a1/T^3 + a2/T^2 + a3/T + a4 + a5*T + a6*T^2 + a7*T^3
+static double ds_R_dT_nasa9(const std::array<double, 10>& a, double T) {
+    double T2 = T * T;
+    double T3 = T2 * T;
+    return a[0] / T3 + a[1] / T2 + a[2] / T + a[3] + a[4] * T + a[5] * T2 + a[6] * T3;
+}
+
 // NASA polynomial evaluation for Cp/R
 double cp_R(std::size_t species_idx, double T) {
     const NASA_Coeffs& nasa = nasa_coeffs[species_idx];
-
-    const std::vector<double>* coeffs;
-    if (T < nasa.T_mid) {
-        if (T < nasa.T_low) {
-            std::cerr << "Warning: Temperature " << T << " K is below valid range (" << nasa.T_low
-                      << " K) for species " << species_names[species_idx] << std::endl;
-            std::cerr << "Results may be less accurate but represent the best available estimate." << std::endl;
-            // Use the lowest valid temperature coefficients
-            T = nasa.T_low;
-        }
-        coeffs = &nasa.low_coeffs;
-    } else {
-        if (T > nasa.T_high) {
-            std::cerr << "Warning: Temperature " << T << " K is above valid range (" << nasa.T_high
-                      << " K) for species " << species_names[species_idx] << std::endl;
-            std::cerr << "Results may be less accurate but represent the best available estimate." << std::endl;
-            // Use the highest valid temperature coefficients
-            T = nasa.T_high;
-        }
-        coeffs = &nasa.high_coeffs;
-    }
-
-    // NASA polynomial for Cp/R: a1 + a2*T + a3*T^2 + a4*T^3 + a5*T^4
-    return (*coeffs)[0] + (*coeffs)[1] * T + (*coeffs)[2] * T * T +
-           (*coeffs)[3] * T * T * T + (*coeffs)[4] * T * T * T * T;
+    const auto* coeffs = find_nasa9_interval(nasa, T, species_idx);
+    return cp_R_nasa9(*coeffs, T);
 }
 
 // NASA polynomial evaluation for H/RT
 double h_RT(std::size_t species_idx, double T) {
     const NASA_Coeffs& nasa = nasa_coeffs[species_idx];
-
-    const std::vector<double>* coeffs;
-    if (T < nasa.T_mid) {
-        if (T < nasa.T_low) {
-            std::cerr << "Warning: Temperature " << T << " K is below valid range (" << nasa.T_low
-                      << " K) for species " << species_names[species_idx] << std::endl;
-            std::cerr << "Results may be less accurate but represent the best available estimate." << std::endl;
-            // Use the lowest valid temperature coefficients
-            T = nasa.T_low;
-        }
-        coeffs = &nasa.low_coeffs;
-    } else {
-        if (T > nasa.T_high) {
-            std::cerr << "Warning: Temperature " << T << " K is above valid range (" << nasa.T_high
-                      << " K) for species " << species_names[species_idx] << std::endl;
-            std::cerr << "Results may be less accurate but represent the best available estimate." << std::endl;
-            // Use the highest valid temperature coefficients
-            T = nasa.T_high;
-        }
-        coeffs = &nasa.high_coeffs;
-    }
-
-    // NASA polynomial for H/RT: a1 + a2*T/2 + a3*T^2/3 + a4*T^3/4 + a5*T^4/5 + a6/T
-    return (*coeffs)[0] + (*coeffs)[1] * T / 2.0 + (*coeffs)[2] * T * T / 3.0 +
-           (*coeffs)[3] * T * T * T / 4.0 + (*coeffs)[4] * T * T * T * T / 5.0 +
-           (*coeffs)[5] / T;
+    const auto* coeffs = find_nasa9_interval(nasa, T, species_idx);
+    return h_RT_nasa9(*coeffs, T);
 }
 
 // NASA polynomial evaluation for S/R
 double s_R(std::size_t species_idx, double T) {
     const NASA_Coeffs& nasa = nasa_coeffs[species_idx];
-
-    const std::vector<double>* coeffs;
-    if (T < nasa.T_mid) {
-        if (T < nasa.T_low) {
-            std::cerr << "Warning: Temperature " << T << " K is below valid range (" << nasa.T_low
-                      << " K) for species " << species_names[species_idx] << std::endl;
-            std::cerr << "Results may be less accurate but represent the best available estimate." << std::endl;
-            // Use the lowest valid temperature coefficients
-            T = nasa.T_low;
-        }
-        coeffs = &nasa.low_coeffs;
-    } else {
-        if (T > nasa.T_high) {
-            std::cerr << "Warning: Temperature " << T << " K is above valid range (" << nasa.T_high
-                      << " K) for species " << species_names[species_idx] << std::endl;
-            std::cerr << "Results may be less accurate but represent the best available estimate." << std::endl;
-            // Use the highest valid temperature coefficients
-            T = nasa.T_high;
-        }
-        coeffs = &nasa.high_coeffs;
-    }
-
-    // NASA polynomial for S/R: a1*ln(T) + a2*T + a3*T^2/2 + a4*T^3/3 + a5*T^4/4 + a7
-    return (*coeffs)[0] * std::log(T) + (*coeffs)[1] * T + (*coeffs)[2] * T * T / 2.0 +
-           (*coeffs)[3] * T * T * T / 3.0 + (*coeffs)[4] * T * T * T * T / 4.0 +
-           (*coeffs)[6];
+    const auto* coeffs = find_nasa9_interval(nasa, T, species_idx);
+    return s_R_nasa9(*coeffs, T);
 }
 
 // Dimensionless Gibbs free energy G/(R*T) = H/(R*T) - S/R
@@ -301,26 +302,10 @@ double ds_dT(double T, const std::vector<double>& X) {
     double ds_dT_mix = 0.0;
     for (std::size_t i = 0; i < X.size(); ++i) {
         if (X[i] > 0.0) {
-            // Derivative of NASA polynomial for S/R with respect to T
             const NASA_Coeffs& nasa = nasa_coeffs[i];
-
-            const std::vector<double>* coeffs;
-            if (T < nasa.T_mid) {
-                if (T < nasa.T_low) {
-                    throw std::out_of_range("Temperature below valid range for species " + species_names[i]);
-                }
-                coeffs = &nasa.low_coeffs;
-            } else {
-                if (T > nasa.T_high) {
-                    throw std::out_of_range("Temperature above valid range for species " + species_names[i]);
-                }
-                coeffs = &nasa.high_coeffs;
-            }
-
-            // d(S/R)/dT = a1/T + a2 + a3*T + a4*T^2/2 + a5*T^3/3
-            double ds_dT_i = (*coeffs)[0] / T + (*coeffs)[1] + (*coeffs)[2] * T +
-                             (*coeffs)[3] * T * T / 2.0 + (*coeffs)[4] * T * T * T / 3.0;
-
+            double T_local = T;
+            const auto* coeffs = find_nasa9_interval(nasa, T_local, i);
+            double ds_dT_i = ds_R_dT_nasa9(*coeffs, T_local);
             ds_dT_mix += X[i] * ds_dT_i * R_GAS;
         }
     }
@@ -337,24 +322,9 @@ double dcp_dT(double T, const std::vector<double>& X) {
     double dcp_dT_mix = 0.0;
     for (std::size_t i = 0; i < X.size(); ++i) {
         const NASA_Coeffs& nasa = nasa_coeffs[i];
-
-        const std::vector<double>* coeffs;
-        if (T < nasa.T_mid) {
-            if (T < nasa.T_low) {
-                throw std::out_of_range("Temperature below valid range for species " + species_names[i]);
-            }
-            coeffs = &nasa.low_coeffs;
-        } else {
-            if (T > nasa.T_high) {
-                throw std::out_of_range("Temperature above valid range for species " + species_names[i]);
-            }
-            coeffs = &nasa.high_coeffs;
-        }
-
-        // d(Cp/R)/dT = a2 + 2*a3*T + 3*a4*T^2 + 4*a5*T^3
-        double dcp_dT_i = (*coeffs)[1] + 2.0 * (*coeffs)[2] * T +
-                          3.0 * (*coeffs)[3] * T * T + 4.0 * (*coeffs)[4] * T * T * T;
-
+        double T_local = T;
+        const auto* coeffs = find_nasa9_interval(nasa, T_local, i);
+        double dcp_dT_i = dcp_R_dT_nasa9(*coeffs, T_local);
         dcp_dT_mix += X[i] * dcp_dT_i * R_GAS;
     }
 
@@ -417,21 +387,16 @@ double dg_over_RT_dT(double T, const std::vector<double>& X) {
     for (std::size_t i = 0; i < X.size(); ++i) {
         if (X[i] > 0.0) {
             // d(G/RT)/dT = d(H/RT)/dT - d(S/R)/dT
-            // d(H/RT)/dT = -H/(R*T^2) + (1/RT)*dH/dT = -H/(R*T^2) + Cp/(R*T)
+            // d(H/RT)/dT = -H/(R*T^2) + Cp/(R*T)
             double h_RT_val = h_RT(i, T);
             double cp_R_val = cp_R(i, T);
             double dh_RT_dT = -h_RT_val / T + cp_R_val / T;
 
-            // d(S/R)/dT from NASA polynomial
+            // d(S/R)/dT from NASA-9 polynomial
             const NASA_Coeffs& nasa = nasa_coeffs[i];
-            const std::vector<double>* coeffs;
-            if (T < nasa.T_mid) {
-                coeffs = &nasa.low_coeffs;
-            } else {
-                coeffs = &nasa.high_coeffs;
-            }
-            double ds_R_dT = (*coeffs)[0] / T + (*coeffs)[1] + (*coeffs)[2] * T +
-                             (*coeffs)[3] * T * T / 2.0 + (*coeffs)[4] * T * T * T / 3.0;
+            double T_local = T;
+            const auto* coeffs = find_nasa9_interval(nasa, T_local, i);
+            double ds_R_dT = ds_R_dT_nasa9(*coeffs, T_local);
 
             dg_dT_mix += X[i] * (dh_RT_dT - ds_R_dT);
         }
@@ -451,8 +416,8 @@ double calc_T_from_h(double h_target, const std::vector<double>& X, double T_gue
         throw std::invalid_argument("Mole fractions do not sum to 1.0");
     }
 
-    double T_min = 300.0;
-    double T_max = 5000.0;
+    double T_min = 200.0;
+    double T_max = 6000.0;
 
     if (T_guess < T_min) T_guess = T_min;
     if (T_guess > T_max) T_guess = T_max;
@@ -504,8 +469,8 @@ double calc_T_from_s(double s_target, double P, const std::vector<double>& X, do
         throw std::invalid_argument("Pressure must be positive");
     }
 
-    double T_min = 300.0;
-    double T_max = 5000.0;
+    double T_min = 200.0;
+    double T_max = 6000.0;
 
     if (T_guess < T_min) T_guess = T_min;
     if (T_guess > T_max) T_guess = T_max;
@@ -553,8 +518,8 @@ double calc_T_from_cp(double cp_target, const std::vector<double>& X, double T_g
         throw std::invalid_argument("Mole fractions do not sum to 1.0");
     }
 
-    double T_min = 300.0;
-    double T_max = 5000.0;
+    double T_min = 200.0;
+    double T_max = 6000.0;
 
     if (T_guess < T_min) T_guess = T_min;
     if (T_guess > T_max) T_guess = T_max;

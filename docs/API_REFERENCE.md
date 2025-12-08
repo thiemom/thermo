@@ -45,6 +45,13 @@ The library uses a fixed set of 14 species. Use `species_index_from_name()` for 
 | 12 | CO | Carbon Monoxide |
 | 13 | H2 | Hydrogen |
 
+### Thermodynamic Data
+
+The library uses **NASA-9 polynomials** for thermodynamic properties:
+- Valid temperature range: 200-6000 K (some species to 20000 K)
+- 1-3 temperature intervals per species
+- Higher accuracy than NASA-7, especially at high temperatures
+
 ### Species Data Files
 
 - **`thermo_transport_data.h`**: Contains all species data including `species_names` vector, `species_index` unordered map, `molar_masses`, `nasa_coeffs`, `transport_props`, and `molecular_structures`. This file is auto-generated.
@@ -53,7 +60,7 @@ The library uses a fixed set of 14 species. Use `species_index_from_name()` for 
   - `name_to_formula` map: `"Methane"` → `"CH4"`
   - `common_name(formula)` function: lookup with error handling
   - `formula(name)` function: inverse lookup with error handling
-- **`thermo_data_generator/`**: Python utility that generates `thermo_transport_data.h` from source data (NASA polynomials, transport properties).
+- **`thermo_data_generator/`**: Python utility that generates `thermo_transport_data.h` from NASA CEA data and Cantera YAML mechanisms.
 
 **Note**: Always use `species_index_from_name("CH4")` rather than hardcoded indices for forward compatibility.
 

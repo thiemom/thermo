@@ -3,7 +3,7 @@
 
 #include "compressible.h"
 #include "thermo.h"
-#include "math_constants.h"
+#include "math_constants.h"  // MSVC compatibility for M_PI
 #include <stdexcept>
 #include <algorithm>
 

@@ -15,6 +15,7 @@ This library provides tools for ideal-gas thermodynamic properties, combustion s
 
 ## Features
 
+- **NASA-9 thermodynamic polynomials** (200-6000 K, some species to 20000 K)
 - Ideal-gas mixture properties: Cp, H, S, density, speed of sound
 - Gibbs free energy helpers `g_over_RT` and `dg_over_RT_dT`
 - Combustion tools: O₂ demand per fuel/mixture, complete combustion to CO₂/H₂O
