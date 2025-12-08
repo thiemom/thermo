@@ -163,6 +163,14 @@ try:
         orifice_K_from_Cd,
         orifice_Cd_from_K,
         orifice_thickness_correction,
+        # Units query API
+        UnitInfo,
+        get_units,
+        input_units,
+        output_units,
+        has_units,
+        list_functions_with_units,
+        all_units,
     )
 except ModuleNotFoundError:
     # Fallback: attempt to import from an installed combaero package that
@@ -292,6 +300,14 @@ except ModuleNotFoundError:
     orifice_K_from_Cd = _core.orifice_K_from_Cd
     orifice_Cd_from_K = _core.orifice_Cd_from_K
     orifice_thickness_correction = _core.orifice_thickness_correction
+    # Units query API
+    UnitInfo = _core.UnitInfo
+    get_units = _core.get_units
+    input_units = _core.input_units
+    output_units = _core.output_units
+    has_units = _core.has_units
+    list_functions_with_units = _core.list_functions_with_units
+    all_units = _core.all_units
 
 
 __all__ = [
@@ -419,5 +435,13 @@ __all__ = [
     "orifice_K_from_Cd",
     "orifice_Cd_from_K",
     "orifice_thickness_correction",
+    # Units query API
+    "UnitInfo",
+    "get_units",
+    "input_units",
+    "output_units",
+    "has_units",
+    "list_functions_with_units",
+    "all_units",
     "__version__",
 ]

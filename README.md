@@ -175,6 +175,7 @@ The root `.envrc` manages a single virtual environment at `./.venv` for:
 - Building the Python wheel via `scikit-build-core`
 - Running Python tests with `pytest`
 - Running data generator scripts in `thermo_data_generator/`
+- Running `scripts/generate_units_md.py` to regenerate `docs/UNITS.md`
 
 ### Build C++ and run C++ tests
 
@@ -229,6 +230,7 @@ See the *Development workflow* section above for concrete commands.
 ## Documentation
 
 - **[API Reference](docs/API_REFERENCE.md)**: Detailed function signatures and usage examples (useful for LLMs)
+- **[Units Reference](docs/UNITS.md)**: SI unit system used throughout the library (auto-generated from `units_data.h`)
 
 ## Acknowledgments
 

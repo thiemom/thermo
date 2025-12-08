@@ -2,6 +2,28 @@
 
 This document provides detailed API reference for LLMs and developers.
 
+## Units
+
+All functions use a consistent SI-based unit system. See **[UNITS.md](UNITS.md)** for the complete reference.
+
+**Key conventions:**
+- Temperature: K (Kelvin)
+- Pressure: Pa (Pascal)
+- Mole fractions: mol/mol (dimensionless)
+- Mass fractions: kg/kg (dimensionless)
+- Thermodynamic properties: molar basis (J/mol, J/(mol·K))
+- Compressible flow outputs: mass basis (J/kg, J/(kg·K))
+
+**Programmatic unit queries (C++ and Python):**
+```cpp
+#include "units.h"
+auto u = combaero::units::get_units("density");  // {input: "T: K, P: Pa, X: mol/mol", output: "kg/m^3"}
+```
+```python
+import combaero
+combaero.get_units("density")  # UnitInfo(input='T: K, P: Pa, X: mol/mol', output='kg/m^3')
+```
+
 ## Species
 
 The library uses a fixed set of 14 species. Use `species_index_from_name()` for robust lookup:

@@ -1,0 +1,247 @@
+#ifndef UNITS_DATA_H
+#define UNITS_DATA_H
+
+#include <cstddef>
+#include <string_view>
+
+namespace combaero::units {
+
+struct Entry {
+    std::string_view name;
+    std::string_view input;
+    std::string_view output;
+};
+
+// All units defined here - edit this table only
+// Format: {function_name, input_units, output_units}
+inline constexpr Entry function_units[] = {
+    // -------------------------------------------------------------------------
+    // thermo.h - Species Data
+    // -------------------------------------------------------------------------
+    {"species_molar_mass",      "-",                                    "g/mol"},
+    {"mwmix",                   "X: mol/mol",                           "g/mol"},
+    {"mole_to_mass",            "X: mol/mol",                           "kg/kg"},
+    {"mass_to_mole",            "Y: kg/kg",                             "mol/mol"},
+
+    // -------------------------------------------------------------------------
+    // thermo.h - Dimensionless NASA Polynomials
+    // -------------------------------------------------------------------------
+    {"cp_R",                    "T: K",                                 "- (Cp/R)"},
+    {"h_RT",                    "T: K",                                 "- (H/(R*T))"},
+    {"s_R",                     "T: K",                                 "- (S/R)"},
+    {"g_over_RT",               "T: K",                                 "- (G/(R*T))"},
+
+    // -------------------------------------------------------------------------
+    // thermo.h - Per-Species Properties
+    // -------------------------------------------------------------------------
+    {"cp_species",              "T: K",                                 "J/(mol*K)"},
+    {"h_species",               "T: K",                                 "J/mol"},
+    {"s_species",               "T: K",                                 "J/(mol*K)"},
+
+    // -------------------------------------------------------------------------
+    // thermo.h - Mixture Properties (Molar Basis)
+    // -------------------------------------------------------------------------
+    {"cp",                      "T: K, X: mol/mol",                     "J/(mol*K)"},
+    {"cv",                      "T: K, X: mol/mol",                     "J/(mol*K)"},
+    {"h",                       "T: K, X: mol/mol",                     "J/mol"},
+    {"u",                       "T: K, X: mol/mol",                     "J/mol"},
+    {"s",                       "T: K, X: mol/mol, P: Pa, P_ref: Pa",   "J/(mol*K)"},
+    {"dh_dT",                   "T: K, X: mol/mol",                     "J/(mol*K)"},
+    {"ds_dT",                   "T: K, X: mol/mol",                     "J/(mol*K^2)"},
+    {"dcp_dT",                  "T: K, X: mol/mol",                     "J/(mol*K^2)"},
+
+    // -------------------------------------------------------------------------
+    // thermo.h - Mixture Properties (Mass/Other Basis)
+    // -------------------------------------------------------------------------
+    {"density",                 "T: K, P: Pa, X: mol/mol",              "kg/m^3"},
+    {"specific_gas_constant",   "X: mol/mol",                           "J/(kg*K)"},
+    {"isentropic_expansion_coefficient", "T: K, X: mol/mol",            "- (gamma)"},
+    {"speed_of_sound",          "T: K, X: mol/mol",                     "m/s"},
+
+    // -------------------------------------------------------------------------
+    // thermo.h - Inverse Solvers
+    // -------------------------------------------------------------------------
+    {"calc_T_from_h",           "h_target: J/mol, X: mol/mol",          "K"},
+    {"calc_T_from_s",           "s_target: J/(mol*K), P: Pa, X: mol/mol", "K"},
+    {"calc_T_from_cp",          "cp_target: J/(mol*K), X: mol/mol",     "K"},
+
+    // -------------------------------------------------------------------------
+    // transport.h - Transport Properties
+    // -------------------------------------------------------------------------
+    {"viscosity",               "T: K, P: Pa, X: mol/mol",              "Pa*s"},
+    {"thermal_conductivity",    "T: K, P: Pa, X: mol/mol",              "W/(m*K)"},
+    {"prandtl",                 "T: K, P: Pa, X: mol/mol",              "- (Pr)"},
+    {"kinematic_viscosity",     "T: K, P: Pa, X: mol/mol",              "m^2/s"},
+    {"thermal_diffusivity",     "T: K, P: Pa, X: mol/mol",              "m^2/s"},
+    {"reynolds",                "T: K, P: Pa, X: mol/mol, V: m/s, L: m", "- (Re)"},
+    {"peclet",                  "T: K, P: Pa, X: mol/mol, V: m/s, L: m", "- (Pe)"},
+
+    // -------------------------------------------------------------------------
+    // compressible.h - Nozzle Flow
+    // -------------------------------------------------------------------------
+    {"nozzle_flow",             "T0: K, P0: Pa, P_back: Pa, A_eff: m^2, X: mol/mol", "CompressibleFlowSolution"},
+    {"nozzle_quasi1d",          "T0: K, P0: Pa, P_exit: Pa, x: m, A: m^2, X: mol/mol", "NozzleSolution"},
+    {"nozzle_cd",               "T0: K, P0: Pa, P_exit: Pa, A: m^2, x: m, X: mol/mol", "NozzleSolution"},
+    {"critical_pressure_ratio", "T0: K, P0: Pa, X: mol/mol",            "- (P*/P0)"},
+    {"mach_from_pressure_ratio","T0: K, P0: Pa, P: Pa, X: mol/mol",     "- (M)"},
+    {"mass_flux_isentropic",    "T0: K, P0: Pa, P: Pa, X: mol/mol",     "kg/(m^2*s)"},
+
+    // -------------------------------------------------------------------------
+    // compressible.h - Fanno Flow
+    // -------------------------------------------------------------------------
+    {"fanno_pipe",              "T_in: K, P_in: Pa, u_in: m/s, L: m, D: m, f: -, X: mol/mol", "FannoSolution"},
+    {"fanno_max_length",        "T_in: K, P_in: Pa, u_in: m/s, D: m, f: -, X: mol/mol", "m"},
+
+    // -------------------------------------------------------------------------
+    // compressible.h - Thrust
+    // -------------------------------------------------------------------------
+    {"nozzle_thrust",           "NozzleSolution, P_amb: Pa",            "ThrustResult"},
+
+    // -------------------------------------------------------------------------
+    // incompressible.h - Bernoulli & Orifice
+    // -------------------------------------------------------------------------
+    {"bernoulli_P2",            "P1: Pa, v1: m/s, v2: m/s, rho: kg/m^3, dz: m, g: m/s^2", "Pa"},
+    {"bernoulli_v2",            "P1: Pa, P2: Pa, v1: m/s, rho: kg/m^3, dz: m, g: m/s^2", "m/s"},
+    {"orifice_mdot",            "P1: Pa, P2: Pa, A: m^2, Cd: -, rho: kg/m^3", "kg/s"},
+    {"orifice_Q",               "P1: Pa, P2: Pa, A: m^2, Cd: -, rho: kg/m^3", "m^3/s"},
+    {"orifice_velocity",        "P1: Pa, P2: Pa, rho: kg/m^3",          "m/s"},
+    {"orifice_area",            "mdot: kg/s, P1: Pa, P2: Pa, Cd: -, rho: kg/m^3", "m^2"},
+    {"orifice_dP",              "mdot: kg/s, A: m^2, Cd: -, rho: kg/m^3", "Pa"},
+
+    // -------------------------------------------------------------------------
+    // incompressible.h - Pipe Flow
+    // -------------------------------------------------------------------------
+    {"pipe_dP",                 "v: m/s, L: m, D: m, f: -, rho: kg/m^3", "Pa"},
+    {"pipe_dP_mdot",            "mdot: kg/s, L: m, D: m, f: -, rho: kg/m^3", "Pa"},
+    {"pipe_velocity",           "mdot: kg/s, D: m, rho: kg/m^3",        "m/s"},
+    {"pipe_mdot",               "v: m/s, D: m, rho: kg/m^3",            "kg/s"},
+    {"dynamic_pressure",        "v: m/s, rho: kg/m^3",                  "Pa"},
+    {"velocity_from_q",         "q: Pa, rho: kg/m^3",                   "m/s"},
+    {"hydraulic_diameter",      "A: m^2, P_wetted: m",                  "m"},
+    {"hydraulic_diameter_rect", "a: m, b: m",                           "m"},
+    {"hydraulic_diameter_annulus", "D_outer: m, D_inner: m",            "m"},
+
+    // -------------------------------------------------------------------------
+    // friction.h - Friction Factor Correlations
+    // -------------------------------------------------------------------------
+    {"friction_haaland",        "Re: -, e_D: -",                        "- (f)"},
+    {"friction_serghides",      "Re: -, e_D: -",                        "- (f)"},
+    {"friction_colebrook",      "Re: -, e_D: -",                        "- (f)"},
+
+    // -------------------------------------------------------------------------
+    // orifice.h - Discharge Coefficients
+    // -------------------------------------------------------------------------
+    {"Cd_sharp_thin_plate",     "OrificeGeometry, OrificeState",        "- (Cd)"},
+    {"Cd_thick_plate",          "OrificeGeometry, OrificeState",        "- (Cd)"},
+    {"Cd_rounded_entry",        "OrificeGeometry, OrificeState",        "- (Cd)"},
+    {"Cd",                      "OrificeGeometry, OrificeState",        "- (Cd)"},
+
+    // -------------------------------------------------------------------------
+    // humidair.h - Humid Air Properties
+    // -------------------------------------------------------------------------
+    {"saturation_vapor_pressure", "T: K",                               "Pa"},
+    {"vapor_pressure",          "T: K, RH: - (0-1)",                    "Pa"},
+    {"humidity_ratio",          "T: K, P: Pa, RH: - (0-1)",             "kg/kg"},
+    {"water_vapor_mole_fraction", "T: K, P: Pa, RH: - (0-1)",           "mol/mol"},
+    {"humid_air_composition",   "T: K, P: Pa, RH: - (0-1)",             "mol/mol"},
+    {"dewpoint",                "T: K, P: Pa, RH: - (0-1)",             "K"},
+    {"relative_humidity_from_dewpoint", "T: K, Tdp: K, P: Pa",          "- (0-1)"},
+    {"wet_bulb_temperature",    "T: K, P: Pa, RH: - (0-1)",             "K"},
+    {"humid_air_enthalpy",      "T: K, P: Pa, RH: - (0-1)",             "J/kg"},
+    {"humid_air_density",       "T: K, P: Pa, RH: - (0-1)",             "kg/m^3"},
+
+    // -------------------------------------------------------------------------
+    // combustion.h - Stoichiometry
+    // -------------------------------------------------------------------------
+    {"oxygen_required_per_mol_fuel",    "-",                            "mol O2/mol fuel"},
+    {"oxygen_required_per_kg_fuel",     "-",                            "mol O2/kg fuel"},
+    {"oxygen_required_per_mol_mixture", "X: mol/mol",                   "mol O2/mol mix"},
+    {"oxygen_required_per_kg_mixture",  "X: mol/mol",                   "mol O2/kg mix"},
+    {"dryair_required_per_mol_fuel",    "-",                            "mol air/mol fuel"},
+    {"dryair_required_per_kg_fuel",     "-",                            "mol air/kg fuel"},
+    {"dryair_required_per_mol_mixture", "X: mol/mol",                   "mol air/mol mix"},
+    {"dryair_required_per_kg_mixture",  "X: mol/mol",                   "mol air/kg mix"},
+
+    // -------------------------------------------------------------------------
+    // combustion.h - Equivalence Ratio
+    // -------------------------------------------------------------------------
+    {"equivalence_ratio_mole",      "X: mol/mol",                       "- (phi)"},
+    {"set_equivalence_ratio_mole",  "phi: -, X: mol/mol",               "mol/mol"},
+    {"equivalence_ratio_mass",      "Y: kg/kg",                         "- (phi)"},
+    {"set_equivalence_ratio_mass",  "phi: -, Y: kg/kg",                 "kg/kg"},
+
+    // -------------------------------------------------------------------------
+    // combustion.h - Mixture Fraction (Bilger)
+    // -------------------------------------------------------------------------
+    {"bilger_beta",                         "Y: kg/kg",                 "-"},
+    {"bilger_mixture_fraction",             "Y: kg/kg",                 "- (Z)"},
+    {"bilger_stoich_mixture_fraction_mass", "Y: kg/kg",                 "- (Z_st)"},
+    {"equivalence_ratio_from_bilger_Z_mass","Z: -, Y: kg/kg",           "- (phi)"},
+    {"bilger_Z_from_equivalence_ratio_mass","phi: -, Y: kg/kg",         "- (Z)"},
+
+    // -------------------------------------------------------------------------
+    // combustion.h - Complete Combustion
+    // -------------------------------------------------------------------------
+    {"complete_combustion_to_CO2_H2O",  "X: mol/mol",                   "mol/mol"},
+    {"complete_combustion",             "State (T: K, P: Pa, X: mol/mol)", "State"},
+    {"complete_combustion_isothermal",  "State",                        "State"},
+
+    // -------------------------------------------------------------------------
+    // combustion.h - Stream Solvers
+    // -------------------------------------------------------------------------
+    {"set_fuel_stream_for_phi",     "phi: -",                           "Stream"},
+    {"set_fuel_stream_for_Tad",     "T_ad_target: K",                   "Stream"},
+    {"set_fuel_stream_for_O2",      "X_O2_target: mol/mol",             "Stream"},
+    {"set_fuel_stream_for_O2_dry",  "X_O2_dry_target: mol/mol",         "Stream"},
+    {"set_fuel_stream_for_CO2",     "X_CO2_target: mol/mol",            "Stream"},
+    {"set_fuel_stream_for_CO2_dry", "X_CO2_dry_target: mol/mol",        "Stream"},
+    {"set_oxidizer_stream_for_Tad", "T_ad_target: K",                   "Stream"},
+    {"set_oxidizer_stream_for_O2",  "X_O2_target: mol/mol",             "Stream"},
+    {"set_oxidizer_stream_for_O2_dry", "X_O2_dry_target: mol/mol",      "Stream"},
+    {"set_oxidizer_stream_for_CO2", "X_CO2_target: mol/mol",            "Stream"},
+    {"set_oxidizer_stream_for_CO2_dry", "X_CO2_dry_target: mol/mol",    "Stream"},
+
+    // -------------------------------------------------------------------------
+    // equilibrium.h - Chemical Equilibrium
+    // -------------------------------------------------------------------------
+    {"wgs_equilibrium",                 "State (T: K, P: Pa, X: mol/mol)", "State"},
+    {"wgs_equilibrium_adiabatic",       "State",                        "State"},
+    {"smr_wgs_equilibrium",             "State",                        "State"},
+    {"smr_wgs_equilibrium_adiabatic",   "State",                        "State"},
+    {"reforming_equilibrium",           "State",                        "State"},
+    {"reforming_equilibrium_adiabatic", "State",                        "State"},
+    {"combustion_equilibrium",          "State",                        "State"},
+
+    // -------------------------------------------------------------------------
+    // state.h - State Properties
+    // -------------------------------------------------------------------------
+    {"State::T",        "-",    "K"},
+    {"State::P",        "-",    "Pa"},
+    {"State::X",        "-",    "mol/mol"},
+    {"State::mw",       "-",    "g/mol"},
+    {"State::cp",       "-",    "J/(mol*K)"},
+    {"State::cv",       "-",    "J/(mol*K)"},
+    {"State::h",        "-",    "J/mol"},
+    {"State::u",        "-",    "J/mol"},
+    {"State::s",        "-",    "J/(mol*K)"},
+    {"State::rho",      "-",    "kg/m^3"},
+    {"State::R",        "-",    "J/(kg*K)"},
+    {"State::gamma",    "-",    "- (gamma)"},
+    {"State::a",        "-",    "m/s"},
+    {"State::mu",       "-",    "Pa*s"},
+    {"State::k",        "-",    "W/(m*K)"},
+    {"State::nu",       "-",    "m^2/s"},
+    {"State::Pr",       "-",    "- (Pr)"},
+    {"State::alpha",    "-",    "m^2/s"},
+
+    // -------------------------------------------------------------------------
+    // state.h - Stream Properties
+    // -------------------------------------------------------------------------
+    {"Stream::mdot",    "-",    "kg/s"},
+};
+
+inline constexpr std::size_t function_count = sizeof(function_units) / sizeof(Entry);
+
+} // namespace combaero::units
+
+#endif // UNITS_DATA_H

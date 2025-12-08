@@ -1,0 +1,383 @@
+# combaero Units Reference
+
+This document defines the SI-based unit system used throughout the combaero library.
+All functions use consistent units to avoid conversion errors.
+
+**Auto-generated from `include/units_data.h` - do not edit manually.**
+
+---
+
+## Base SI Units
+
+| Quantity           | Unit   | Symbol |
+|--------------------|--------|--------|
+| Temperature        | Kelvin | K      |
+| Pressure           | Pascal | Pa     |
+| Mass               | kilogram | kg   |
+| Length             | meter  | m      |
+| Time               | second | s      |
+| Amount of substance| mole   | mol    |
+
+---
+
+## Derived Units
+
+| Quantity             | Unit        | Symbol     |
+|----------------------|-------------|------------|
+| Energy               | Joule       | J = kg*m^2/s^2 |
+| Power                | Watt        | W = J/s    |
+| Force                | Newton      | N = kg*m/s^2 |
+| Dynamic viscosity    | Pascal-second | Pa*s     |
+| Kinematic viscosity  | -           | m^2/s      |
+| Thermal conductivity | -           | W/(m*K)    |
+| Specific heat        | -           | J/(mol*K) or J/(kg*K) |
+| Enthalpy             | -           | J/mol or J/kg |
+| Entropy              | -           | J/(mol*K) or J/(kg*K) |
+| Density              | -           | kg/m^3     |
+| Velocity             | -           | m/s        |
+| Area                 | -           | m^2        |
+| Volume               | -           | m^3        |
+| Mass flow rate       | -           | kg/s       |
+| Volumetric flow rate | -           | m^3/s      |
+
+---
+
+## Physical Constants
+
+| Constant             | Value              | Unit       |
+|----------------------|--------------------|------------|
+| Universal gas constant R | 8.31446261815324 | J/(mol*K)  |
+| Boltzmann constant   | 1.380649e-23       | J/K        |
+| Avogadro's number    | 6.02214076e23      | 1/mol      |
+| Standard gravity g0  | 9.80665            | m/s^2      |
+
+---
+
+## Function Units by Module
+
+### thermo.h
+
+#### Species Data
+
+| Function             | Input Units | Output Unit |
+|----------------------|-------------|-------------|
+| `species_molar_mass` | -           | g/mol       |
+| `mwmix`              | X: mol/mol  | g/mol       |
+| `mole_to_mass`       | X: mol/mol  | kg/kg       |
+| `mass_to_mole`       | Y: kg/kg    | mol/mol     |
+
+#### Dimensionless NASA Polynomials
+
+| Function    | Input Units | Output Unit |
+|-------------|-------------|-------------|
+| `cp_R`      | T: K        | - (Cp/R)    |
+| `h_RT`      | T: K        | - (H/(R*T)) |
+| `s_R`       | T: K        | - (S/R)     |
+| `g_over_RT` | T: K        | - (G/(R*T)) |
+
+#### Per-Species Properties
+
+| Function     | Input Units | Output Unit |
+|--------------|-------------|-------------|
+| `cp_species` | T: K        | J/(mol*K)   |
+| `h_species`  | T: K        | J/mol       |
+| `s_species`  | T: K        | J/(mol*K)   |
+
+#### Mixture Properties (Molar Basis)
+
+| Function | Input Units                        | Output Unit |
+|----------|------------------------------------|-------------|
+| `cp`     | T: K, X: mol/mol                   | J/(mol*K)   |
+| `cv`     | T: K, X: mol/mol                   | J/(mol*K)   |
+| `h`      | T: K, X: mol/mol                   | J/mol       |
+| `u`      | T: K, X: mol/mol                   | J/mol       |
+| `s`      | T: K, X: mol/mol, P: Pa, P_ref: Pa | J/(mol*K)   |
+| `dh_dT`  | T: K, X: mol/mol                   | J/(mol*K)   |
+| `ds_dT`  | T: K, X: mol/mol                   | J/(mol*K^2) |
+| `dcp_dT` | T: K, X: mol/mol                   | J/(mol*K^2) |
+
+#### Mixture Properties (Mass/Other Basis)
+
+| Function                           | Input Units             | Output Unit |
+|------------------------------------|-------------------------|-------------|
+| `density`                          | T: K, P: Pa, X: mol/mol | kg/m^3      |
+| `specific_gas_constant`            | X: mol/mol              | J/(kg*K)    |
+| `isentropic_expansion_coefficient` | T: K, X: mol/mol        | - (gamma)   |
+| `speed_of_sound`                   | T: K, X: mol/mol        | m/s         |
+
+#### Inverse Solvers
+
+| Function         | Input Units                            | Output Unit |
+|------------------|----------------------------------------|-------------|
+| `calc_T_from_h`  | h_target: J/mol, X: mol/mol            | K           |
+| `calc_T_from_s`  | s_target: J/(mol*K), P: Pa, X: mol/mol | K           |
+| `calc_T_from_cp` | cp_target: J/(mol*K), X: mol/mol       | K           |
+
+---
+
+### transport.h
+
+#### Transport Properties
+
+| Function               | Input Units                           | Output Unit |
+|------------------------|---------------------------------------|-------------|
+| `viscosity`            | T: K, P: Pa, X: mol/mol               | Pa*s        |
+| `thermal_conductivity` | T: K, P: Pa, X: mol/mol               | W/(m*K)     |
+| `prandtl`              | T: K, P: Pa, X: mol/mol               | - (Pr)      |
+| `kinematic_viscosity`  | T: K, P: Pa, X: mol/mol               | m^2/s       |
+| `thermal_diffusivity`  | T: K, P: Pa, X: mol/mol               | m^2/s       |
+| `reynolds`             | T: K, P: Pa, X: mol/mol, V: m/s, L: m | - (Re)      |
+| `peclet`               | T: K, P: Pa, X: mol/mol, V: m/s, L: m | - (Pe)      |
+
+---
+
+### compressible.h
+
+#### Nozzle Flow
+
+| Function                   | Input Units                                         | Output Unit              |
+|----------------------------|-----------------------------------------------------|--------------------------|
+| `nozzle_flow`              | T0: K, P0: Pa, P_back: Pa, A_eff: m^2, X: mol/mol   | CompressibleFlowSolution |
+| `nozzle_quasi1d`           | T0: K, P0: Pa, P_exit: Pa, x: m, A: m^2, X: mol/mol | NozzleSolution           |
+| `nozzle_cd`                | T0: K, P0: Pa, P_exit: Pa, A: m^2, x: m, X: mol/mol | NozzleSolution           |
+| `critical_pressure_ratio`  | T0: K, P0: Pa, X: mol/mol                           | - (P*/P0)                |
+| `mach_from_pressure_ratio` | T0: K, P0: Pa, P: Pa, X: mol/mol                    | - (M)                    |
+| `mass_flux_isentropic`     | T0: K, P0: Pa, P: Pa, X: mol/mol                    | kg/(m^2*s)               |
+
+#### Fanno Flow
+
+| Function           | Input Units                                                | Output Unit   |
+|--------------------|------------------------------------------------------------|---------------|
+| `fanno_pipe`       | T_in: K, P_in: Pa, u_in: m/s, L: m, D: m, f: -, X: mol/mol | FannoSolution |
+| `fanno_max_length` | T_in: K, P_in: Pa, u_in: m/s, D: m, f: -, X: mol/mol       | m             |
+
+#### Thrust
+
+| Function        | Input Units               | Output Unit  |
+|-----------------|---------------------------|--------------|
+| `nozzle_thrust` | NozzleSolution, P_amb: Pa | ThrustResult |
+
+---
+
+### incompressible.h
+
+#### Bernoulli & Orifice
+
+| Function           | Input Units                                            | Output Unit |
+|--------------------|--------------------------------------------------------|-------------|
+| `bernoulli_P2`     | P1: Pa, v1: m/s, v2: m/s, rho: kg/m^3, dz: m, g: m/s^2 | Pa          |
+| `bernoulli_v2`     | P1: Pa, P2: Pa, v1: m/s, rho: kg/m^3, dz: m, g: m/s^2  | m/s         |
+| `orifice_mdot`     | P1: Pa, P2: Pa, A: m^2, Cd: -, rho: kg/m^3             | kg/s        |
+| `orifice_Q`        | P1: Pa, P2: Pa, A: m^2, Cd: -, rho: kg/m^3             | m^3/s       |
+| `orifice_velocity` | P1: Pa, P2: Pa, rho: kg/m^3                            | m/s         |
+| `orifice_area`     | mdot: kg/s, P1: Pa, P2: Pa, Cd: -, rho: kg/m^3         | m^2         |
+| `orifice_dP`       | mdot: kg/s, A: m^2, Cd: -, rho: kg/m^3                 | Pa          |
+
+#### Pipe Flow
+
+| Function                     | Input Units                               | Output Unit |
+|------------------------------|-------------------------------------------|-------------|
+| `pipe_dP`                    | v: m/s, L: m, D: m, f: -, rho: kg/m^3     | Pa          |
+| `pipe_dP_mdot`               | mdot: kg/s, L: m, D: m, f: -, rho: kg/m^3 | Pa          |
+| `pipe_velocity`              | mdot: kg/s, D: m, rho: kg/m^3             | m/s         |
+| `pipe_mdot`                  | v: m/s, D: m, rho: kg/m^3                 | kg/s        |
+| `dynamic_pressure`           | v: m/s, rho: kg/m^3                       | Pa          |
+| `velocity_from_q`            | q: Pa, rho: kg/m^3                        | m/s         |
+| `hydraulic_diameter`         | A: m^2, P_wetted: m                       | m           |
+| `hydraulic_diameter_rect`    | a: m, b: m                                | m           |
+| `hydraulic_diameter_annulus` | D_outer: m, D_inner: m                    | m           |
+
+---
+
+### friction.h
+
+#### Friction Factor Correlations
+
+| Function             | Input Units   | Output Unit |
+|----------------------|---------------|-------------|
+| `friction_haaland`   | Re: -, e_D: - | - (f)       |
+| `friction_serghides` | Re: -, e_D: - | - (f)       |
+| `friction_colebrook` | Re: -, e_D: - | - (f)       |
+
+---
+
+### orifice.h
+
+#### Discharge Coefficients
+
+| Function              | Input Units                   | Output Unit |
+|-----------------------|-------------------------------|-------------|
+| `Cd_sharp_thin_plate` | OrificeGeometry, OrificeState | - (Cd)      |
+| `Cd_thick_plate`      | OrificeGeometry, OrificeState | - (Cd)      |
+| `Cd_rounded_entry`    | OrificeGeometry, OrificeState | - (Cd)      |
+| `Cd`                  | OrificeGeometry, OrificeState | - (Cd)      |
+
+---
+
+### humidair.h
+
+#### Humid Air Properties
+
+| Function                          | Input Units              | Output Unit |
+|-----------------------------------|--------------------------|-------------|
+| `saturation_vapor_pressure`       | T: K                     | Pa          |
+| `vapor_pressure`                  | T: K, RH: - (0-1)        | Pa          |
+| `humidity_ratio`                  | T: K, P: Pa, RH: - (0-1) | kg/kg       |
+| `water_vapor_mole_fraction`       | T: K, P: Pa, RH: - (0-1) | mol/mol     |
+| `humid_air_composition`           | T: K, P: Pa, RH: - (0-1) | mol/mol     |
+| `dewpoint`                        | T: K, P: Pa, RH: - (0-1) | K           |
+| `relative_humidity_from_dewpoint` | T: K, Tdp: K, P: Pa      | - (0-1)     |
+| `wet_bulb_temperature`            | T: K, P: Pa, RH: - (0-1) | K           |
+| `humid_air_enthalpy`              | T: K, P: Pa, RH: - (0-1) | J/kg        |
+| `humid_air_density`               | T: K, P: Pa, RH: - (0-1) | kg/m^3      |
+
+---
+
+### combustion.h
+
+#### Stoichiometry
+
+| Function                          | Input Units | Output Unit      |
+|-----------------------------------|-------------|------------------|
+| `oxygen_required_per_mol_fuel`    | -           | mol O2/mol fuel  |
+| `oxygen_required_per_kg_fuel`     | -           | mol O2/kg fuel   |
+| `oxygen_required_per_mol_mixture` | X: mol/mol  | mol O2/mol mix   |
+| `oxygen_required_per_kg_mixture`  | X: mol/mol  | mol O2/kg mix    |
+| `dryair_required_per_mol_fuel`    | -           | mol air/mol fuel |
+| `dryair_required_per_kg_fuel`     | -           | mol air/kg fuel  |
+| `dryair_required_per_mol_mixture` | X: mol/mol  | mol air/mol mix  |
+| `dryair_required_per_kg_mixture`  | X: mol/mol  | mol air/kg mix   |
+
+#### Equivalence Ratio
+
+| Function                     | Input Units        | Output Unit |
+|------------------------------|--------------------|-------------|
+| `equivalence_ratio_mole`     | X: mol/mol         | - (phi)     |
+| `set_equivalence_ratio_mole` | phi: -, X: mol/mol | mol/mol     |
+| `equivalence_ratio_mass`     | Y: kg/kg           | - (phi)     |
+| `set_equivalence_ratio_mass` | phi: -, Y: kg/kg   | kg/kg       |
+
+#### Mixture Fraction (Bilger)
+
+| Function                               | Input Units      | Output Unit |
+|----------------------------------------|------------------|-------------|
+| `bilger_beta`                          | Y: kg/kg         | -           |
+| `bilger_mixture_fraction`              | Y: kg/kg         | - (Z)       |
+| `bilger_stoich_mixture_fraction_mass`  | Y: kg/kg         | - (Z_st)    |
+| `equivalence_ratio_from_bilger_Z_mass` | Z: -, Y: kg/kg   | - (phi)     |
+| `bilger_Z_from_equivalence_ratio_mass` | phi: -, Y: kg/kg | - (Z)       |
+
+#### Complete Combustion
+
+| Function                         | Input Units                     | Output Unit |
+|----------------------------------|---------------------------------|-------------|
+| `complete_combustion_to_CO2_H2O` | X: mol/mol                      | mol/mol     |
+| `complete_combustion`            | State (T: K, P: Pa, X: mol/mol) | State       |
+| `complete_combustion_isothermal` | State                           | State       |
+
+#### Stream Solvers
+
+| Function                          | Input Units               | Output Unit |
+|-----------------------------------|---------------------------|-------------|
+| `set_fuel_stream_for_phi`         | phi: -                    | Stream      |
+| `set_fuel_stream_for_Tad`         | T_ad_target: K            | Stream      |
+| `set_fuel_stream_for_O2`          | X_O2_target: mol/mol      | Stream      |
+| `set_fuel_stream_for_O2_dry`      | X_O2_dry_target: mol/mol  | Stream      |
+| `set_fuel_stream_for_CO2`         | X_CO2_target: mol/mol     | Stream      |
+| `set_fuel_stream_for_CO2_dry`     | X_CO2_dry_target: mol/mol | Stream      |
+| `set_oxidizer_stream_for_Tad`     | T_ad_target: K            | Stream      |
+| `set_oxidizer_stream_for_O2`      | X_O2_target: mol/mol      | Stream      |
+| `set_oxidizer_stream_for_O2_dry`  | X_O2_dry_target: mol/mol  | Stream      |
+| `set_oxidizer_stream_for_CO2`     | X_CO2_target: mol/mol     | Stream      |
+| `set_oxidizer_stream_for_CO2_dry` | X_CO2_dry_target: mol/mol | Stream      |
+
+---
+
+### equilibrium.h
+
+#### Chemical Equilibrium
+
+| Function                          | Input Units                     | Output Unit |
+|-----------------------------------|---------------------------------|-------------|
+| `wgs_equilibrium`                 | State (T: K, P: Pa, X: mol/mol) | State       |
+| `wgs_equilibrium_adiabatic`       | State                           | State       |
+| `smr_wgs_equilibrium`             | State                           | State       |
+| `smr_wgs_equilibrium_adiabatic`   | State                           | State       |
+| `reforming_equilibrium`           | State                           | State       |
+| `reforming_equilibrium_adiabatic` | State                           | State       |
+| `combustion_equilibrium`          | State                           | State       |
+
+---
+
+### state.h
+
+#### State Properties
+
+| Function       | Input Units | Output Unit |
+|----------------|-------------|-------------|
+| `State::T`     | -           | K           |
+| `State::P`     | -           | Pa          |
+| `State::X`     | -           | mol/mol     |
+| `State::mw`    | -           | g/mol       |
+| `State::cp`    | -           | J/(mol*K)   |
+| `State::cv`    | -           | J/(mol*K)   |
+| `State::h`     | -           | J/mol       |
+| `State::u`     | -           | J/mol       |
+| `State::s`     | -           | J/(mol*K)   |
+| `State::rho`   | -           | kg/m^3      |
+| `State::R`     | -           | J/(kg*K)    |
+| `State::gamma` | -           | - (gamma)   |
+| `State::a`     | -           | m/s         |
+| `State::mu`    | -           | Pa*s        |
+| `State::k`     | -           | W/(m*K)     |
+| `State::nu`    | -           | m^2/s       |
+| `State::Pr`    | -           | - (Pr)      |
+| `State::alpha` | -           | m^2/s       |
+
+#### Stream Properties
+
+| Function       | Input Units | Output Unit |
+|----------------|-------------|-------------|
+| `Stream::mdot` | -           | kg/s        |
+
+---
+
+## Dimensionless Quantities
+
+| Quantity                | Symbol | Unit     | Definition                    |
+|-------------------------|--------|----------|-------------------------------|
+| Mach number             | M      | -        | v / a                         |
+| Reynolds number         | Re     | -        | rho*V*L / mu                  |
+| Prandtl number          | Pr     | -        | mu*Cp / k                     |
+| Peclet number           | Pe     | -        | V*L / alpha                   |
+| Isentropic exponent     | gamma  | -        | Cp / Cv                       |
+| Equivalence ratio       | phi    | -        | (F/A) / (F/A)_stoich          |
+| Mixture fraction        | Z      | -        | Bilger definition             |
+| Discharge coefficient   | Cd     | -        | mdot_actual / mdot_ideal      |
+| Friction factor (Darcy) | f      | -        | dP / (L/D * rho*v^2/2)        |
+| Pressure ratio          | -      | -        | P / P0                        |
+| Diameter ratio          | beta   | -        | d / D                         |
+
+---
+
+## Common Reference Values
+
+| Quantity                | Value          | Unit   | Notes                    |
+|-------------------------|----------------|--------|--------------------------|
+| Standard pressure       | 101325         | Pa     | 1 atm                    |
+| Standard temperature    | 298.15         | K      | 25 C                     |
+| Standard gravity        | 9.80665        | m/s^2  | Used for Isp             |
+| Sea level air density   | ~1.225         | kg/m^3 | At 15 C, 101325 Pa       |
+
+---
+
+## Summary: Key Unit Conventions
+
+1. **Temperature**: Always Kelvin (K)
+2. **Pressure**: Always Pascal (Pa)
+3. **Molar mass**: g/mol (historical convention; convert to kg/mol for mass-basis calculations)
+4. **Thermodynamic properties**: Molar basis (J/mol, J/(mol*K)) in thermo functions
+5. **Compressible flow**: Mass basis (J/kg, J/(kg*K)) in flow solutions
+6. **Fractions**: mole fractions X (mol/mol), mass fractions Y (kg/kg)
+7. **Relative humidity**: Fraction (0-1), not percentage
+8. **Angles**: Radians (rad)

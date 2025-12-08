@@ -14,6 +14,7 @@
 #include "friction.h"
 #include "state.h"
 #include "orifice.h"
+#include "units.h"
 
 namespace py = pybind11;
 
@@ -1517,7 +1518,7 @@ PYBIND11_MODULE(_core, m)
     // Orifice flow
     m.def(
         "orifice_mdot",
-        &orifice_mdot,
+        static_cast<double(*)(double, double, double, double, double)>(&orifice_mdot),
         py::arg("P1"),
         py::arg("P2"),
         py::arg("A"),
@@ -1572,7 +1573,7 @@ PYBIND11_MODULE(_core, m)
 
     m.def(
         "orifice_dP",
-        &orifice_dP,
+        static_cast<double(*)(double, double, double, double)>(&orifice_dP),
         py::arg("mdot"),
         py::arg("A"),
         py::arg("Cd"),
@@ -1835,5 +1836,88 @@ PYBIND11_MODULE(_core, m)
         "Thickness correction factor for thick-plate orifices.\n\n"
         "Multiplies thin-plate Cd to account for flow reattachment.\n"
         "Returns 1.0 for t/d <= 0.02 (thin plate)."
+    );
+
+    // -------------------------------------------------------------------------
+    // Units query API
+    // -------------------------------------------------------------------------
+
+    py::class_<combaero::units::UnitInfo>(m, "UnitInfo")
+        .def_readonly("input", &combaero::units::UnitInfo::input, "Input units description")
+        .def_readonly("output", &combaero::units::UnitInfo::output, "Output units description")
+        .def("__repr__", [](const combaero::units::UnitInfo& u) {
+            return "UnitInfo(input='" + std::string(u.input) + "', output='" + std::string(u.output) + "')";
+        });
+
+    m.def(
+        "get_units",
+        [](const std::string& name) -> py::object {
+            auto u = combaero::units::get_units(name);
+            if (u) {
+                return py::cast(combaero::units::UnitInfo{u->input, u->output});
+            }
+            return py::none();
+        },
+        py::arg("function_name"),
+        "Get input/output units for a function by name.\n\n"
+        "Returns UnitInfo with 'input' and 'output' fields, or None if not found.\n\n"
+        "Example:\n"
+        "    >>> combaero.get_units('density')\n"
+        "    UnitInfo(input='T: K, P: Pa, X: mol/mol', output='kg/m^3')"
+    );
+
+    m.def(
+        "input_units",
+        [](const std::string& name) {
+            return std::string(combaero::units::input_units(name));
+        },
+        py::arg("function_name"),
+        "Get input units string for a function (empty string if not found)."
+    );
+
+    m.def(
+        "output_units",
+        [](const std::string& name) {
+            return std::string(combaero::units::output_units(name));
+        },
+        py::arg("function_name"),
+        "Get output units string for a function (empty string if not found)."
+    );
+
+    m.def(
+        "has_units",
+        [](const std::string& name) {
+            return combaero::units::has_units(name);
+        },
+        py::arg("function_name"),
+        "Check if a function has registered units."
+    );
+
+    m.def(
+        "list_functions_with_units",
+        []() {
+            std::vector<std::string> names;
+            for (auto it = combaero::units::begin(); it != combaero::units::end(); ++it) {
+                names.emplace_back(it->name);
+            }
+            return names;
+        },
+        "List all function names that have registered units."
+    );
+
+    m.def(
+        "all_units",
+        []() {
+            py::dict result;
+            for (auto it = combaero::units::begin(); it != combaero::units::end(); ++it) {
+                py::dict entry;
+                entry["input"] = std::string(it->input);
+                entry["output"] = std::string(it->output);
+                result[py::str(std::string(it->name))] = entry;
+            }
+            return result;
+        },
+        "Get all registered units as a dictionary.\n\n"
+        "Returns: dict mapping function_name -> {'input': ..., 'output': ...}"
     );
 }
