@@ -38,6 +38,15 @@ Available mechanisms in this directory:
 - `aramco2.yaml` - AramcoMech 2.0
 - `sandiego20161214.yaml` - San Diego mechanism
 
+**Note: YAML 1.1 Boolean Parsing Bug**
+
+YAML 1.1 (used by PyYAML) parses certain species names as booleans:
+- `NO` → `False`
+- `ON` → `True`
+
+The generator handles this automatically via `_fix_yaml_species_name()`, converting
+these back to the correct species names.
+
 ### Standalone Databases (future)
 
 The generator is designed to support separate thermo and transport databases:
@@ -89,5 +98,17 @@ The generator produces `thermo_transport_data.h` containing:
 ## Testing
 
 ```bash
-pytest test_create_cpp_header.py test_extract_thermo_transport_data.py
+pytest test_generate_thermo_data.py test_create_cpp_header.py test_extract_thermo_transport_data.py
 ```
+
+## Known Limitations
+
+### C++ Tests Use Hardcoded Mole Fraction Vectors
+
+The C++ test suite (`tests/test_thermo_transport.cpp`) uses hardcoded mole fraction
+vectors sized for the current 14-species set (from JetSurf2). If you change the
+species list, tests will fail with "Mole fraction vector size does not match number
+of species".
+
+**To add/remove species**, you must also update the test vectors or make them
+dynamically sized based on `num_species()`.

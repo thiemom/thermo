@@ -103,6 +103,18 @@ def calculate_molar_mass(composition: dict[str, int]) -> float:
 # Cantera YAML Parser
 # -----------------------------------------------------------------------------
 
+def _fix_yaml_species_name(name) -> str:
+    """Fix species names that YAML misparses as booleans.
+    
+    YAML 1.1 parses 'NO' as boolean False and 'ON' as boolean True.
+    """
+    if name is False:
+        return "NO"
+    if name is True:
+        return "ON"
+    return str(name).upper()
+
+
 def load_cantera_yaml(path: Path, species_filter: set[str] | None = None) -> tuple[list[SpeciesData], NASAFormat]:
     """Load species data from a Cantera YAML mechanism file."""
     import yaml
@@ -123,7 +135,7 @@ def load_cantera_yaml(path: Path, species_filter: set[str] | None = None) -> tup
     
     for sp in species_list:
         # YAML may parse some names (like NO) as booleans
-        name = str(sp["name"]).upper()
+        name = _fix_yaml_species_name(sp["name"])
         
         if species_filter and name not in species_filter:
             continue
@@ -201,8 +213,7 @@ def list_species_in_yaml(path: Path) -> list[str]:
     with open(path) as f:
         data = yaml.safe_load(f)
     
-    # YAML may parse some names (like NO) as booleans, convert to string
-    return [str(sp["name"]).upper() for sp in data.get("species", [])]
+    return [_fix_yaml_species_name(sp["name"]) for sp in data.get("species", [])]
 
 
 # -----------------------------------------------------------------------------
