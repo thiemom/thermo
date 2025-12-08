@@ -8,8 +8,8 @@
 #include "../include/compressible.h"
 #include "../include/friction.h"
 #include "../include/state.h"
+#include "../include/math_constants.h"
 #include <vector>
-#include <cmath>
 
 // Test fixture for thermo transport tests
 class ThermoTransportTest : public ::testing::Test {

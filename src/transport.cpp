@@ -1,13 +1,8 @@
 #include "../include/transport.h"
 #include "../include/thermo.h"
 #include "../include/thermo_transport_data.h"
-#include <cmath>
+#include "../include/math_constants.h"
 #include <stdexcept>
-
-// M_PI is not defined by default on MSVC
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
 
 using combaero::thermo::R_GAS;
 using combaero::thermo::BOLTZMANN;
