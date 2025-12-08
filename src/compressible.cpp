@@ -7,6 +7,11 @@
 #include <stdexcept>
 #include <algorithm>
 
+// M_PI is not defined by default on MSVC
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 using combaero::thermo::R_GAS;
 
 namespace {
