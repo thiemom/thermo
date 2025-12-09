@@ -705,3 +705,266 @@ mdot = cb.orifice_mdot_Cd(geom, Cd, state.dP, state.rho)
 K = cb.orifice_K_from_Cd(Cd, geom.beta)
 Cd_back = cb.orifice_Cd_from_K(K, geom.beta)
 ```
+
+## Heat Transfer (`heat_transfer.h`)
+
+Convective heat transfer correlations, overall heat transfer coefficients, and utilities for multi-layer wall analysis.
+
+### Nusselt Number Correlations
+
+All correlations are for turbulent internal pipe flow.
+
+```cpp
+// Dittus-Boelter (1930) - simple, widely used
+// Nu = 0.023 * Re^0.8 * Pr^n  (n=0.4 heating, n=0.3 cooling)
+// Valid: Re > 10000, 0.6 < Pr < 160, L/D > 10
+double nusselt_dittus_boelter(double Re, double Pr, bool heating = true);
+
+// Gnielinski (1976) - more accurate, wider range
+// Valid: 2300 < Re < 5e6, 0.5 < Pr < 2000
+double nusselt_gnielinski(double Re, double Pr);
+double nusselt_gnielinski(double Re, double Pr, double f);  // with known friction factor
+
+// Sieder-Tate (1936) - includes viscosity correction
+// Valid: Re > 10000, 0.7 < Pr < 16700, L/D > 10
+double nusselt_sieder_tate(double Re, double Pr, double mu_bulk, double mu_wall);
+
+// Petukhov (1970) - high accuracy for smooth tubes
+// Valid: 10^4 < Re < 5×10^6, 0.5 < Pr < 2000
+double nusselt_petukhov(double Re, double Pr);
+double nusselt_petukhov(double Re, double Pr, double f);
+```
+
+### Heat Transfer Coefficient
+
+```cpp
+// HTC from Nusselt number: h = Nu * k / D
+double htc_from_nusselt(double Nu, double k, double D);
+
+// State-based convenience (uses Gnielinski)
+double nusselt_pipe(const State& state, double V, double D);
+double htc_pipe(const State& state, double V, double D);
+```
+
+### Overall Heat Transfer Coefficient
+
+For composite walls with convective boundaries and conductive layers:
+
+```cpp
+// General form: 1/U = Σ(1/h_i) + Σ(t_j/k_j)
+// h_values: convective HTCs [W/(m²·K)]
+// t_over_k: thickness/conductivity for each layer [m²·K/W]
+double overall_htc(const std::vector<double>& h_values,
+                   const std::vector<double>& t_over_k);
+
+// Two-sided wall: hot fluid | wall layers | cold fluid
+double overall_htc_wall(double h_inner, double h_outer,
+                        const std::vector<double>& t_over_k_layers);
+
+// Multi-layer with fouling resistances
+double overall_htc_wall_multilayer(double h_inner, double h_outer,
+                                    const std::vector<double>& t_over_k_layers,
+                                    double R_fouling_inner = 0.0,
+                                    double R_fouling_outer = 0.0);
+```
+
+### Thermal Resistance
+
+```cpp
+// Convective: R = 1/(h·A)
+double thermal_resistance(double h, double A);
+
+// Conductive: R = t/(k·A)
+double thermal_resistance_wall(double t, double k, double A);
+```
+
+### Log Mean Temperature Difference (LMTD)
+
+```cpp
+// General LMTD from temperature differences
+double lmtd(double dT1, double dT2);
+
+// Counter-flow heat exchanger
+// dT1 = T_hot_in - T_cold_out, dT2 = T_hot_out - T_cold_in
+double lmtd_counterflow(double T_hot_in, double T_hot_out,
+                        double T_cold_in, double T_cold_out);
+
+// Parallel-flow heat exchanger
+// dT1 = T_hot_in - T_cold_in, dT2 = T_hot_out - T_cold_out
+double lmtd_parallelflow(double T_hot_in, double T_hot_out,
+                         double T_cold_in, double T_cold_out);
+```
+
+### Heat Rate and Flux
+
+```cpp
+// Heat transfer rate: Q = U * A * ΔT [W]
+double heat_rate(double U, double A, double dT);
+
+// Heat flux: q = U * ΔT [W/m²]
+double heat_flux(double U, double dT);
+
+// Inverse: solve for area or temperature difference
+double heat_transfer_area(double Q, double U, double dT);
+double heat_transfer_dT(double Q, double U, double A);
+```
+
+### Wall Temperature Profile
+
+Compute temperatures at each layer interface through a multi-layer wall:
+
+```cpp
+// Returns vector of interface temperatures (N+1 values for N layers)
+// Edge 0: hot-side wall surface
+// Edge 1: interface between layer 0 and layer 1
+// ...
+// Edge N: cold-side wall surface
+std::vector<double> wall_temperature_profile(
+    double T_hot, double T_cold,      // Bulk fluid temperatures [K]
+    double h_hot, double h_cold,      // Convective HTCs [W/(m²·K)]
+    const std::vector<double>& t_over_k,  // Layer resistances [m²·K/W]
+    double& q);                       // Output: heat flux [W/m²]
+
+// Without heat flux output
+std::vector<double> wall_temperature_profile(
+    double T_hot, double T_cold,
+    double h_hot, double h_cold,
+    const std::vector<double>& t_over_k);
+```
+
+### Heat Flux from Measured Temperature
+
+Infer heat flux from thermocouple measurements:
+
+```cpp
+// From temperature at a wall edge (layer interface)
+double heat_flux_from_T_at_edge(
+    double T_measured, std::size_t edge_idx,
+    double T_hot, double T_cold,
+    double h_hot, double h_cold,
+    const std::vector<double>& t_over_k);
+
+// From temperature at arbitrary depth (embedded thermocouple)
+double heat_flux_from_T_at_depth(
+    double T_measured, double depth_from_hot,
+    double T_hot, double T_cold,
+    double h_hot, double h_cold,
+    const std::vector<double>& thicknesses,
+    const std::vector<double>& conductivities);
+
+// Infer bulk temperature from edge T and known heat flux
+double bulk_T_from_edge_T_and_q(
+    double T_measured, std::size_t edge_idx, double q,
+    double h_hot, double h_cold,
+    const std::vector<double>& t_over_k,
+    const std::string& solve_for);  // "hot" or "cold"
+```
+
+### Temperature Sensitivity (Risk Assessment)
+
+Partial derivatives for uncertainty propagation and risk assessment:
+
+```cpp
+// Sensitivity to bulk temperature changes
+// Returns: ∂T_edge/∂T_hot [-] (0 to 1)
+double dT_edge_dT_hot(std::size_t edge_idx, double h_hot, double h_cold,
+                       const std::vector<double>& t_over_k);
+
+// Returns: ∂T_edge/∂T_cold [-] (0 to 1)
+double dT_edge_dT_cold(std::size_t edge_idx, double h_hot, double h_cold,
+                        const std::vector<double>& t_over_k);
+
+// Both at once: {∂T/∂T_hot, ∂T/∂T_cold}
+std::pair<double, double> dT_edge_dT_bulk(
+    std::size_t edge_idx, double h_hot, double h_cold,
+    const std::vector<double>& t_over_k);
+
+// Sensitivity to heat flux: ∂T_edge/∂q [K·m²/W]
+double dT_edge_dq(std::size_t edge_idx, double h_hot,
+                   const std::vector<double>& t_over_k);
+```
+
+**Key properties:**
+- `∂T/∂T_hot + ∂T/∂T_cold = 1` (always, by linearity)
+- Edges closer to hot side have higher `∂T/∂T_hot`
+- `∂T/∂q` is negative (higher flux → lower edge T)
+
+### NTU-Effectiveness Method
+
+For heat exchanger analysis:
+
+```cpp
+// Number of Transfer Units: NTU = U * A / C_min
+double ntu(double U, double A, double C_min);
+
+// Capacity ratio: C_r = C_min / C_max
+double capacity_ratio(double C_min, double C_max);
+
+// Effectiveness for counter-flow HX
+// ε = (1 - exp(-NTU*(1-C_r))) / (1 - C_r*exp(-NTU*(1-C_r)))
+double effectiveness_counterflow(double NTU, double C_r);
+
+// Effectiveness for parallel-flow HX
+// ε = (1 - exp(-NTU*(1+C_r))) / (1 + C_r)
+double effectiveness_parallelflow(double NTU, double C_r);
+
+// Heat rate from effectiveness
+// Q = ε * C_min * (T_hot_in - T_cold_in)
+double heat_rate_from_effectiveness(double epsilon, double C_min,
+                                     double T_hot_in, double T_cold_in);
+```
+
+### Usage Example
+
+```cpp
+#include "heat_transfer.h"
+
+// Furnace wall: steel + ceramic + steel
+std::vector<double> t_over_k = {
+    0.010 / 50.0,   // 10mm steel (k=50)
+    0.100 / 0.5,    // 100mm ceramic (k=0.5)
+    0.005 / 50.0    // 5mm steel (k=50)
+};
+
+double h_hot = 150.0;   // Hot gas convection
+double h_cold = 10.0;   // Natural convection
+
+// Overall HTC
+double U = overall_htc({h_hot, h_cold}, t_over_k);
+
+// Temperature profile
+double T_hot = 1473.15;  // 1200°C
+double T_cold = 298.15;  // 25°C
+double q;
+auto temps = wall_temperature_profile(T_hot, T_cold, h_hot, h_cold, t_over_k, q);
+
+// Risk assessment: if gas temperature spikes 100K
+auto [dT_hot, dT_cold] = dT_edge_dT_bulk(1, h_hot, h_cold, t_over_k);
+double delta_T_interface = dT_hot * 100.0;  // Interface temperature increase
+```
+
+### Python Usage
+
+```python
+import combaero as ca
+import numpy as np
+
+# Multi-layer wall
+t_over_k = np.array([0.01/50, 0.1/0.5, 0.005/50])
+h_hot, h_cold = 150.0, 10.0
+
+# Temperature profile
+temps, q = ca.wall_temperature_profile(500+273, 25+273, h_hot, h_cold, t_over_k)
+
+# Heat flux from thermocouple at steel-ceramic interface
+q_measured = ca.heat_flux_from_T_at_edge(temps[1], 1, 773, 298, h_hot, h_cold, t_over_k)
+
+# Risk assessment
+dT_hot, dT_cold = ca.dT_edge_dT_bulk(1, h_hot, h_cold, t_over_k)
+print(f"If T_hot +100K → interface +{dT_hot*100:.1f}K")
+
+# NTU-effectiveness
+NTU = ca.ntu(U=100, A=10, C_min=500)
+eps = ca.effectiveness_counterflow(NTU, C_r=0.5)
+Q = ca.heat_rate_from_effectiveness(eps, 500, 400, 300)
+```
